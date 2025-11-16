@@ -2,39 +2,45 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import logging
 from Adminpage import adminpage
-import pickle
+import json
 
-with open('users.pickle', 'rb') as file:
-    user_list = pickle.load(file)
 
 class loginpage(tk.Frame):
     def __init__(self, App, controller):
         super().__init__(App)
         self.controller = controller
-        ttk.Label(self, text = "CampTrack Login Page", font = ("Arial", 20)).pack()
-        ttk.Label(self, text = "Enter your login: ").pack()
-        self.login = ttk.Entry(self, width = 40)
+        ttk.Label(self, text="CampTrack Login Page", font=("Arial", 20)).pack()
+        ttk.Label(self, text="Enter your login: ").pack()
+        self.login = ttk.Entry(self, width=40)
         self.login.pack()
 
-        ttk.Label(self, text = "Enter your password: ").pack()
-        self.password = ttk.Entry(self, width = 40, show = "*")
+        ttk.Label(self, text="Enter your password: ").pack()
+        self.password = ttk.Entry(self, width=40, show="*")
         self.password.pack()
 
         ttk.Button(self, text="Login", command=self.login_).pack()
 
     def login_(self):
+        with open("users_database.json", 'r') as file:
+            users = json.load(file)
+
         user = self.login.get()
         password = self.password.get()
-        if user == "Admin" and password == "Password":
+        if user not in users:
+            messagebox.showerror("Error", "User not found")
+
+        if users[user]["Password"] != password:
+            messagebox.showerror("Error", "Incorrect Password")
+
+        role = users[user]["Role"]
+
+        if role == "Admin":
             logging.info("Admin Logged In")
             self.controller.show_frame(adminpage)
-            self.login.delete(0, tk.END)
-            self.password.delete(0, tk.END)
-        elif user in user_list and user_list[password]:
-            messagebox.showinfo("Welcome", "Login Successful")
-        else:
-            logging.warning("Login Failed: Incorrect Username or Password")
-            messagebox.showerror("Login Failed", "Incorrect Username or Password")
+        if role == "Logistics Co-ordinator":
+            logging.info("Logistics Co-ordinator Logged In")
+            pass
+
 
 if __name__ == '__main__':
     root = tk.Tk()
