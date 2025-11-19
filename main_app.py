@@ -1,11 +1,11 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-import logging
-from Adminpage import adminpage
+from admin_GUI import AdminPage
 from login_page import loginpage
+from admin_logic import *
+import pandas as pd
 
 logging.basicConfig(level = logging.DEBUG,
-                    filename = 'logs/CampTrack.log',
+                    filename ='data/CampTrack.log',
                     filemode = 'a',
                     format='%(module)s - %(levelname)s - %(message)s')
 
@@ -20,12 +20,25 @@ class App(tk.Tk):
         self.grid_columnconfigure(0, weight=1)
         self.frames = {}
 
-        for F in (loginpage, adminpage):
+        #Loads Users
+        self.users = self.init_users()
+
+        #Initialises Frames
+        for F in (loginpage, AdminPage):
             frame = F(self.container, self)
             self.frames[F] = frame
-            frame.grid(row=0, column =0,  sticky='nsew')
+            frame.grid(row=0, column=0, sticky='nsew')
 
         self.show_frame(loginpage)
+
+    @classmethod
+    def init_users(cls, file = "data/users_database.csv"):
+        users_list = {}
+        df = pd.read_csv(file)
+        for _, row in df.iterrows():
+            users_list[row["Username"]] = User(row["Username"], row["Password"], row["Role"], row["is_active"])
+        return users_list
+
 
     def show_frame(self, page_ident):
         self.frames[page_ident].tkraise()
