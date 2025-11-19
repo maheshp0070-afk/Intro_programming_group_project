@@ -20,26 +20,25 @@ class loginpage(tk.Frame):
         ttk.Button(self, text="Login", command=self.login_).pack()
 
     def login_(self):
-        with open("users_database.csv", 'r') as file:
+        with open("data/users_database.csv", 'r') as file:
             users = pd.read_csv(file)
 
         user = self.login.get()
         password = self.password.get()
-        if user not in users:
-            messagebox.showerror("Error", "User not found")
-            return
-        if users[user]["Password"] != password:
-            messagebox.showerror("Error", "Incorrect Password")
+
+        #Check username and password is in database
+        if user not in users["Username"].tolist() or users.loc[user, "Password"] != password :
+            messagebox.showerror("Error", "Incorrect username or password")
             return
 
-        role = users[user]["Role"]
+        role = users.loc[user, "Role"]
 
         if role == "Admin":
             logging.info("Admin Logged In")
             self.controller.show_frame(AdminPage)
-        if role == "Logistics Co-ordinator":
-            logging.info("Logistics Co-ordinator Logged In")
-            pass
+        #if role == "Logistics Co-ordinator":
+            #logging.info("Logistics Co-ordinator Logged In")
+            #pass
 
 if __name__ == '__main__':
     root = tk.Tk()
