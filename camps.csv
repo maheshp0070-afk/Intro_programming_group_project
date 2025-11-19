@@ -1,0 +1,4 @@
+name, location, type, start_date, end_date, food_supply_per_day,food_demand_per_day,scout_leader
+firstcamp,Mt Kailash,overnight,16/11/2025,17/11/2025,18,,
+secondcamp,Mt Everest,expedition,17/11/2025,21/11/2025,56,,
+thirdcamp,Mt Kilimanjaro,overnight,10/04/2005,11/04/2005,18,,
