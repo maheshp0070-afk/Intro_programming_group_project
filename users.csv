@@ -1,6 +1,0 @@
-username,password,role,status,pay
-admin,,admin,TRUE,
-coordinator,,coordinator,TRUE,
-leader1,,leader,TRUE,
-leader2,,leader,TRUE,
-leader3,,leader,TRUE,
