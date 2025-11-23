@@ -1,7 +1,7 @@
 from persistence import load_json, save_json
 
-CAMPS_FILE = 'data/camps.json'
-ALLOCATIONS_FILE = 'data/allocations.json'
+CAMPS_FILE = 'camps.json'
+ALLOCATIONS_FILE = 'allocations.json'
 
 class Camp:
     def __init__(self, camp_id, name, location, start_date, end_date, camp_type, food_units_per_day=0):
