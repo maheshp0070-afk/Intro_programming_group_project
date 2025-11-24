@@ -16,7 +16,7 @@ canvas.tag_lower(canvas_bg)
 welcome = canvas.create_text(
     -600, 360,
     text = "Welcome, Logistics Coordinator!", #Don't make this username as it could be too long..
-    font = ("Tsukushi A Round Gothic", 75, "bold"),
+    font = ("Comic Sans MS", 40, "bold"),
     fill = "white"
 )
 
@@ -69,6 +69,13 @@ def show_widgets():
 
         canvas.after(300, show_others)
 
+
+
+
+
+
+
+
 algeria_map = tk.PhotoImage(file="map.png")
 
 photoimagetent_full = tk.PhotoImage(file="Tent-icon.png")
@@ -77,29 +84,51 @@ photoimagetent = photoimagetent_full.subsample(8, 8)
 photoimagetent_highlighted_full = tk.PhotoImage(file="Highlighted-Tent-icon.png")
 photoimagetent_highlighted = photoimagetent_highlighted_full.subsample(8, 8)
 
+
 tent_icons = {}
 
-positions = {
-    'tent_1': (788, 400),
-    'tent_2': (960, 233),
-    'tent_3': (1071, 289),
-    'tent_4': (904, 400),
-    'tent_5': (1071, 400),
-    'tent_6': (960, 511),
-    'tent_7': (1043, 539),
-    'tent_8': (988, 356)
-}
+positions = {'tent_1': (78, 250), 'tent_2': (250, 83), 'tent_3': (361, 139), 'tent_4': (194, 250), 'tent_5': (361, 250), 'tent_6': (250, 361), 'tent_7': (333, 389), 'tent_8': (278, 206)}
 
-canvas.tent_normal = photoimagetent
-canvas.tent_highlighted = photoimagetent_highlighted
+
+
+
+
+
+
+
 
 def show_others():
 
-    canvas.create_image(960, 400, image=algeria_map)
+    global mapsubframe
+    mapsubframe = tk.Frame(canvas, bg="lightblue", width=500, height=500) #dimensions for right plank window
+    canvas.create_window(960, 400, window=mapsubframe)
+
+    global mapsubcanvas
+    mapsubcanvas = tk.Canvas(mapsubframe, width='500', height='500', bg = 'white')
+
+    mapsubcanvas.tent_normal = photoimagetent
+    mapsubcanvas.tent_highlighted = photoimagetent_highlighted
+
+    mapsubcanvas.pack()
+    mapsubcanvas.create_image(250, 250, image=algeria_map)
+
+
+    global msgsubframe
+    msgsubframe = tk.Frame(canvas, width=500, height=280, bg="white") # dimentions for messaging widget
+    canvas.create_window(320,525, window = msgsubframe)
+    #msging system here
+
+    global ntfsubframe
+    ntfsubframe = tk.Frame(canvas, width=500, height=140, bg="white") # dimensions for notification widget
+    canvas.create_window(320,190, window = ntfsubframe)
+    #see below how we implemented map to other subframe to implement further
+
+
+
 
     for tent, (x, y) in positions.items():
 
-        item = canvas.create_image(x, y, anchor="c", image=photoimagetent)
+        item = mapsubcanvas.create_image(x, y, anchor="c", image=photoimagetent)
 
         tent_icons[item] = tent
 
@@ -110,14 +139,14 @@ def on_click(event, item):
     messagebox.showinfo(f"{tent_icons.get(item)}", f"{tent_icons.get(item)} located at ({event.x}, {event.y})")
 
 def on_enter(item):
-    canvas.itemconfig(item, image=canvas.tent_highlighted)
+    mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_highlighted)
 
 def on_leave(item):
-    canvas.itemconfig(item, image=canvas.tent_normal)
+    mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_normal)
 
 def create_bind(item):
-    canvas.tag_bind(item, "<Button-1>", lambda event: on_click(event, item))
-    canvas.tag_bind(item, "<Enter>", lambda event: (on_enter(item)))
-    canvas.tag_bind(item, "<Leave>", lambda event: (on_leave(item)))
+    mapsubcanvas.tag_bind(item, "<Button-1>", lambda event: on_click(event, item))
+    mapsubcanvas.tag_bind(item, "<Enter>", lambda event: (on_enter(item)))
+    mapsubcanvas.tag_bind(item, "<Leave>", lambda event: (on_leave(item)))
 
 root.mainloop()
