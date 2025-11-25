@@ -114,12 +114,12 @@ def show_others():
 
 
     global msgsubframe
-    msgsubframe = tk.Frame(canvas, width=500, height=280, bg="white") # dimentions for messaging widget
+    msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white") # dimentions for messaging widget
     canvas.create_window(320,525, window = msgsubframe)
     #msging system here
 
     global ntfsubframe
-    ntfsubframe = tk.Frame(canvas, width=500, height=140, bg="white") # dimensions for notification widget
+    ntfsubframe = tk.Frame(canvas, width=500, height=120, bg="white") # dimensions for notification widget
     canvas.create_window(320,190, window = ntfsubframe)
     #see below how we implemented map to other subframe to implement further
 
