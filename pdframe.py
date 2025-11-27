@@ -28,8 +28,8 @@ class Camp:
                 type=row['type'],
                 start_date=datetime.datetime.strptime(row['start_date'], '%d/%m/%Y'),
                 end_date=datetime.datetime.strptime(row['end_date'], '%d/%m/%Y'),
-                food_supply_per_day=int(row['food_supply_per_day']),
-                food_demand_per_day=int(row['food_demand_per_day']),
+                food_supply_per_day=(row['food_supply_per_day']),
+                food_demand_per_day=(row['food_demand_per_day']),
                 scout_leader=row['scout_leader'],
                 pay=round(float(row['pay']), 2)
             )
@@ -109,7 +109,7 @@ class User:
 
 camps = Camp.load_camps("data/camps.csv")
 
-print(camps["firstcamp"].type)
+
 
 
 
