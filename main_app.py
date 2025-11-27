@@ -1,6 +1,6 @@
 import tkinter as tk
 from admin_GUI import AdminPage
-from login_page import loginpage
+from login_page import LoginPage
 from admin_logic import *
 import pandas as pd
 
@@ -24,21 +24,20 @@ class App(tk.Tk):
         self.users = self.init_users()
 
         #Initialises Frames
-        for F in (loginpage, AdminPage):
+        for F in (LoginPage, AdminPage):
             frame = F(self.container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky='nsew')
 
-        self.show_frame(loginpage)
+        self.show_frame(LoginPage)
 
     @classmethod
-    def init_users(cls, file = "data/users_database.csv"):
+    def init_users(cls):
         users_list = {}
-        df = pd.read_csv(file)
+        df = UserManager.load_users()
         for _, row in df.iterrows():
             users_list[row["Username"]] = User(row["Username"], row["Password"], row["Role"], row["is_active"])
         return users_list
-
 
     def show_frame(self, page_ident):
         self.frames[page_ident].tkraise()

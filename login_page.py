@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import logging
 from admin_GUI import AdminPage
-import pandas as pd
+from admin_logic import *
 
-class loginpage(tk.Frame):
+class LoginPage(tk.Frame):
     def __init__(self, App, controller):
         super().__init__(App)
         self.controller = controller
@@ -20,28 +20,26 @@ class loginpage(tk.Frame):
         ttk.Button(self, text="Login", command=self.login_).pack()
 
     def login_(self):
-        with open("data/users_database.csv", 'r') as file:
-            users = pd.read_csv(file)
-
-        user = self.login.get()
+        username = self.login.get()
         password = self.password.get()
+        users = UserManager.load_users()
 
         #Check username and password is in database
-        if user not in users["Username"].tolist() or users.loc[user, "Password"] != password :
+        if username not in users["Username"].values or users.loc[username, "Password"] != password :
             messagebox.showerror("Error", "Incorrect username or password")
             return
 
-        role = users.loc[user, "Role"]
+        role = users.loc[username, "Role"]
 
         if role == "Admin":
             logging.info("Admin Logged In")
             self.controller.show_frame(AdminPage)
-        #if role == "Logistics Co-ordinator":
-            #logging.info("Logistics Co-ordinator Logged In")
-            #pass
+        if role == "Logistics Co-ordinator":
+            logging.info("Logistics Co-ordinator Logged In")
+            pass
 
 if __name__ == '__main__':
     root = tk.Tk()
-    app = loginpage(root, root)
+    app = LoginPage(root, root)
     app.pack()
     app.mainloop()
