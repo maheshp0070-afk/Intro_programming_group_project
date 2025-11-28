@@ -9,7 +9,7 @@ root.title("CampTrack / Logistics Coordinator / Dashboard") #Maybe this should b
 canvas = tk.Canvas(root, width="1280", height="720", bg="white")
 canvas.pack(expand=True, fill="both")
 
-bg = tk.PhotoImage(file="background.png")
+bg = tk.PhotoImage(file="Desert.png")
 canvas_bg = canvas.create_image(0, 0, image=bg, anchor="nw")
 canvas.tag_lower(canvas_bg)
 
