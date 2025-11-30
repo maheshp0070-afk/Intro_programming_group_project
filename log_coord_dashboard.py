@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import ttk
+import datetime
 
 root = tk.Tk()
 root.geometry("1280x720")
@@ -17,7 +19,7 @@ welcome = canvas.create_text(
     -600, 360,
     text = "Welcome, Logistics Coordinator!", #Don't make this username as it could be too long..
     font = ("Comic Sans MS", 40, "bold"),
-    fill = "white"
+    fill = "forest green"
 )
 
 def slide_in():
@@ -26,7 +28,7 @@ def slide_in():
 
     if x < 640:
 
-        canvas.move(welcome, 15, 0)
+        canvas.move(welcome, 45, 0)
         canvas.after(15, slide_in)
 
     else:
@@ -39,7 +41,7 @@ def slide_out():
 
     if x < 1880:
 
-        canvas.move(welcome, 15, 0)
+        canvas.move(welcome, 45, 0)
         canvas.after(15, slide_out)
 
     else:
@@ -61,92 +63,263 @@ def show_widgets():
 
     if y < 360:
 
-        canvas.move(canvas_map_board, 0, 15)
-        canvas.move(canvas_map_notif_msg_board, 0, 15)
+        canvas.move(canvas_map_board, 0, 45)
+        canvas.move(canvas_map_notif_msg_board, 0, 45)
         canvas.after(15, show_widgets)
 
     else:
 
         canvas.after(300, show_others)
 
-
-
-
-
-
-
-
 algeria_map = tk.PhotoImage(file="map.png")
 
-photoimagetent_full = tk.PhotoImage(file="Tent-icon.png")
-photoimagetent = photoimagetent_full.subsample(8, 8)
+photoimagetent = tk.PhotoImage(file="Tent-icon.png")
 
-photoimagetent_highlighted_full = tk.PhotoImage(file="Highlighted-Tent-icon.png")
-photoimagetent_highlighted = photoimagetent_highlighted_full.subsample(8, 8)
+photoimagetent_highlighted = tk.PhotoImage(file="Highlighted-Tent-icon.png")
 
+photoimageavailable = tk.PhotoImage(file="green.png")
+
+photoimageavailable_highlighted = tk.PhotoImage(file="Highlighted-green.png")
+
+photoimageplanned = tk.PhotoImage(file="amber.png")
+
+photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
 
 tent_icons = {}
 
 positions = {'tent_1': (78, 250), 'tent_2': (250, 83), 'tent_3': (361, 139), 'tent_4': (194, 250), 'tent_5': (361, 250), 'tent_6': (250, 361), 'tent_7': (333, 389), 'tent_8': (278, 206)}
 
-
-
-
-
-
-
-
+tent_states = {'tent_1': 'Ongoing', 'tent_2': 'Ongoing', 'tent_3': 'Ongoing', 'tent_4': 'Planned', 'tent_5': 'Available', 'tent_6': 'Available', 'tent_7': 'Available', 'tent_8': 'Available'}
 
 def show_others():
 
     global mapsubframe
     mapsubframe = tk.Frame(canvas, bg="lightblue", width=500, height=500) #dimensions for right plank window
-    canvas.create_window(960, 400, window=mapsubframe)
+    global map_window
+    map_window = canvas.create_window(960, 400, window=mapsubframe)
 
     global mapsubcanvas
     mapsubcanvas = tk.Canvas(mapsubframe, width='500', height='500', bg = 'white')
 
     mapsubcanvas.tent_normal = photoimagetent
     mapsubcanvas.tent_highlighted = photoimagetent_highlighted
+    mapsubcanvas.available = photoimageavailable
+    mapsubcanvas.available_highlighted = photoimageavailable_highlighted
+    mapsubcanvas.planned = photoimageplanned
+    mapsubcanvas.planned_highlighted = photoimageplanned_highlighted
 
     mapsubcanvas.pack()
     mapsubcanvas.create_image(250, 250, image=algeria_map)
 
-
     global msgsubframe
-    msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white") # dimentions for messaging widget
-    canvas.create_window(320,525, window = msgsubframe)
+    msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white") # dimensions for messaging widget
+    global msg_window
+    msg_window = canvas.create_window(320,525, window = msgsubframe)
     #msging system here
 
     global ntfsubframe
     ntfsubframe = tk.Frame(canvas, width=500, height=120, bg="white") # dimensions for notification widget
-    canvas.create_window(320,190, window = ntfsubframe)
+    global ntf_window
+    ntf_window = canvas.create_window(320,190, window = ntfsubframe)
     #see below how we implemented map to other subframe to implement further
-
-
-
 
     for tent, (x, y) in positions.items():
 
-        item = mapsubcanvas.create_image(x, y, anchor="c", image=photoimagetent)
+        if tent_states[tent] == 'Ongoing':
 
-        tent_icons[item] = tent
+            item = mapsubcanvas.create_image(x, y, anchor="c", image=photoimagetent)
+            tent_icons[item] = tent
+            create_bind(item)
 
-        create_bind(item)
+        elif tent_states[tent] == 'Available':
+
+            item = mapsubcanvas.create_image(x, y, anchor="c", image=photoimageavailable)
+            tent_icons[item] = tent
+            create_bind(item)
+
+        elif tent_states[tent] == 'Planned':
+
+            item = mapsubcanvas.create_image(x, y, anchor="c", image=photoimageplanned)
+            tent_icons[item] = tent
+            create_bind(item)
 
 def on_click(event, item):
     pass  # add logic func here
-    messagebox.showinfo(f"{tent_icons.get(item)}", f"{tent_icons.get(item)} located at ({event.x}, {event.y})")
+    if messagebox.askyesno(f"{tent_icons.get(item)}", f"{tent_states.get(tent_icons.get(item))} {tent_icons.get(item)} located at ({event.x}, {event.y}). Go to location?"):
+        show_camps_listbox()
+        show_create_camp_window()
 
 def on_enter(item):
-    mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_highlighted)
+
+    if tent_states.get(tent_icons.get(item)) == 'Ongoing':
+
+        mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_highlighted)
+
+    if tent_states.get(tent_icons.get(item)) == 'Available':
+
+        mapsubcanvas.itemconfig(item, image=mapsubcanvas.available_highlighted)
+
+    if tent_states.get(tent_icons.get(item)) == 'Planned':
+
+        mapsubcanvas.itemconfig(item, image=mapsubcanvas.planned_highlighted)
 
 def on_leave(item):
-    mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_normal)
+
+    if tent_states.get(tent_icons.get(item)) == 'Ongoing':
+
+        mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_normal)
+
+    if tent_states.get(tent_icons.get(item)) == 'Available':
+
+        mapsubcanvas.itemconfig(item, image=mapsubcanvas.available)
+
+    if tent_states.get(tent_icons.get(item)) == 'Planned':
+
+        mapsubcanvas.itemconfig(item, image=mapsubcanvas.planned)
 
 def create_bind(item):
     mapsubcanvas.tag_bind(item, "<Button-1>", lambda event: on_click(event, item))
     mapsubcanvas.tag_bind(item, "<Enter>", lambda event: (on_enter(item)))
     mapsubcanvas.tag_bind(item, "<Leave>", lambda event: (on_leave(item)))
+
+#camps_listbox_subframe:
+
+camps_listbox_subframe = tk.Frame(canvas, width=500, height=300, bg="lightblue")
+camps_listbox_window = canvas.create_window(320,525, window = camps_listbox_subframe, width=500, height=300)
+camps_listbox = tk.Listbox(camps_listbox_subframe)
+
+#camps_at_locations = {'tent_1': [], 'tent_2': [], 'tent_3': [], 'tent_4': [], 'tent_5': [], 'tent_6': [], 'tent_7': [], 'tent_8': []} # each list to be filled with camps (past, pres, fut) at that location.
+
+tent_1_camps = ['camp1', 'camp2', 'camp3']
+
+for camp in tent_1_camps:
+    camps_listbox.insert(tk.END, camp)
+
+camps_listbox.pack(expand=True, fill="both")
+canvas.itemconfigure(camps_listbox_window, state="hidden")
+
+def show_camps_listbox():
+    canvas.itemconfigure(msg_window, state="hidden")
+    canvas.itemconfigure(camps_listbox_window, state="normal")
+
+#create_camp_window:
+
+makecampframe = tk.Frame(canvas, background="lightblue")
+makecampframe.pack(padx=0, pady=0, fill="both", expand=True)
+startframe = tk.Frame(makecampframe, bg="lightblue")
+startframe.pack(side="top", padx=5, pady=10, fill="both", expand=True)
+for i in range(3):
+    startframe.grid_columnconfigure(i, weight=1)
+
+endframe = tk.Frame(makecampframe, bg="lightblue")
+endframe.pack(side="top", padx=5, pady=10, fill="both", expand=True)
+for i in range(3):
+    endframe.grid_columnconfigure(i, weight=1)
+
+Nameframe = tk.Frame(makecampframe, bg="lightblue")
+Nameframe.pack(side="top", padx=5, pady=10, fill="both", expand=True)
+
+
+months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+days = [str(i) for i in range(1, 32)]
+
+def button_select():
+    selected_syear = sdropdown_years.get()
+    selected_smonth = sdropdown_months.get()
+    selected_sday = sdropdown_days.get()
+    selected_eyear = edropdown_years.get()
+    selected_emonth = edropdown_months.get()
+    selected_eday = edropdown_days.get()
+    camp_name_input = camp_name_entry.get()
+    food_input = food_entry.get()
+    pay_input = scout_payment.get()
+    if (selected_syear == "Select a start year" or selected_smonth == "Select a start month" or selected_sday == "Select a start day" or selected_eyear == "Select an end year" or selected_emonth == "Select an end month" or selected_eday == "Select an end day"):
+        tk.messagebox.showerror("Entry date error","Please enter dates in all the dropdown boxes")
+        return None, None
+    elif camp_name_input == "":
+        tk.messagebox.showerror("Entry camp name error","Please enter a name for the camp")
+        return None, None
+    elif food_input == "":
+        tk.messagebox.showerror("Entry food stock error","Please enter a whole number for food stock per day")
+        return None, None
+    elif pay_input == "":
+        tk.messagebox.showerror("Entry payment error","Please enter a number for daily payment rate")
+        return None, None
+    else:
+        selected_sdate = datetime.datetime(int(selected_syear), months.index(selected_smonth) + 1, int(selected_sday))
+        selected_edate = datetime.datetime(int(selected_eyear), months.index(selected_emonth) + 1, int(selected_eday))
+
+        if selected_sdate > selected_edate:
+            tk.messagebox.showerror("Date error","Error!, camp end must be after start")
+            return None, None
+        elif selected_sdate < datetime.datetime.now() or selected_edate < datetime.datetime.now():
+            tk.messagebox.showerror("Date error","Error!, camp must be set in the future")
+            return None, None
+        else:
+            tk.messagebox.showinfo("Creation success", f"You have successfully created camp: {camp_name_input} on the selected dates: {selected_sdate.strftime('%Y-%m-%d')} to {selected_edate.strftime('%Y-%m-%d')} with {food_input} food stock per day {pay_input} and daily payment rate.") #location to be added, e.g. akfadou. Also to be formatted diff if day/overnight/expedition
+            return selected_sdate, selected_edate
+
+#Need to add text in the window as a user help/info, i.e. what day, overnight and exped means. Also need to dosomething similar for every window in app, like colour key for dashboard.
+
+
+def get_years(): #check whether we can just use a list instead of function
+    current_date = datetime.datetime.now()
+    years = [str(current_date.year), str(current_date.year + 1)]
+    return years
+
+
+create_camp_label = tk.Label(Nameframe, text="Please enter camp name:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+create_camp_label.grid(column = 0, row = 0, pady=5)
+camp_name_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand = (root.register(lambda x: len(x) < 25), '%P'))
+camp_name_entry.grid(column = 1, row = 0, pady=5)
+
+create_food_label = tk.Label(Nameframe, text="Food stock available per day:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+create_food_label.grid(column = 0, row = 1, pady=5)
+food_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <99 ) or x == ""), '%P'))
+food_entry.grid(column = 1, row = 1 , pady=5)
+
+payment_label = tk.Label(Nameframe, text="Daily payment rate for scout leader:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+payment_label.grid(column = 0, row = 2, pady=5)
+scout_payment = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <999) or x == ""), '%P'))
+scout_payment.grid(column = 1, row = 2 , pady=5)
+
+sdropdown_years = ttk.Combobox(startframe, values=get_years(), state="readonly")
+sdropdown_years.set("Select a start year")
+sdropdown_years.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+
+
+sdropdown_months = ttk.Combobox(startframe, values=months, state="readonly")
+sdropdown_months.set("Select a start month")
+sdropdown_months.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+
+
+sdropdown_days = ttk.Combobox(startframe, values=days, state="readonly")
+sdropdown_days.set("Select a start day")
+sdropdown_days.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
+
+edropdown_years = ttk.Combobox(endframe, values=get_years(), state="readonly")
+edropdown_years.set("Select an end year")
+edropdown_years.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+
+
+edropdown_months = ttk.Combobox(endframe, values=months, state="readonly")
+edropdown_months.set("Select an end month")
+edropdown_months.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+
+
+edropdown_days = ttk.Combobox(endframe, values=days, state="readonly")
+edropdown_days.set("Select an end day")
+edropdown_days.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
+
+date_button = tk.Button(Nameframe, text="Create camp", command=button_select)
+date_button.grid(row=3, column=1, pady=20)
+
+create_camp_window = canvas.create_window(960, 400, window=makecampframe, width=500, height=500)
+canvas.itemconfigure(create_camp_window, state="hidden")
+
+def show_create_camp_window():
+
+    canvas.itemconfigure(create_camp_window, state="normal")
+    canvas.itemconfigure(map_window, state="hidden")
 
 root.mainloop()
