@@ -81,23 +81,26 @@ class AdminPage(tk.Frame):
         def show_others():
 
             self.userslist_subframe = tk.Frame(self.canvas, bg="lightblue", width=500, height=500)  # dimensions for right plank window
-            self.canvas.create_window(960, 400, window=self.userslist_subframe)
+            self.canvas.create_window(960, 420, window=self.userslist_subframe)
 
             # Create GUI for users list
-            columns = ["Username", "Password", "Role", "is_active"]
+            display_columns = ["Username", "Password", "Role", "Active?"]
             users = UserManager.load_users()
-            users_treeview = ttk.Treeview(self.userslist_subframe, selectmode="browse", columns = columns, show = "headings")
+            users_treeview = ttk.Treeview(self.userslist_subframe, selectmode="browse", columns = display_columns, show = "headings", height = 14)
+            style = ttk.Style()
+            style.configure("Treeview", font=("Comic Sans MS", 13, "bold"), rowheight=30, padding = (0,10))
+            style.configure("Treeview.Heading", font=("Comic Sans MS", 12, "bold"), padding=(0, 0))
             users_treeview.pack()
 
-            for col in users.columns:
-                print(col)
-                users_treeview.heading(f"{col}", text = f'{col}')
-                users_treeview.heading(f"{col}", text = f'{col}')
-
+            for col in display_columns:
+                users_treeview.heading(col, text=col)
+                users_treeview.column(col, width = 160, anchor = "center")
             for index, row in users.iterrows():
                 users_treeview.insert("", index, values = list(row))
 
-            self.msgsubframe = tk.Frame(self.canvas, width=500, height=280)  # dimensions for messaging widget
+            users_treeview.column("Active?", width=100)
+            self.msgsubframe = tk.Frame(self.canvas, width=500, height=280, bg ="light grey")  # dimensions for messaging widget
+            self.canvas.create_window(320, 525, window=self.msgsubframe)
             from Msg_service import MessagingApp
             MessagingApp(self.msgsubframe)
 
@@ -123,7 +126,7 @@ class AdminPage(tk.Frame):
         header.grid_columnconfigure(1, weight=0)
 
         # Header contents
-        tk.Label(header, text="Admin Dashboard", font=("Arial", 18)).grid(row=0, column=0, sticky='w', padx=10, pady=10)
+        tk.Label(header, text="Admin Dashboard", font=("Arial", 18), background='white').grid(row=0, column=0, sticky='w', padx=10, pady=10)
         ttk.Button(header, text="Logout", command=self.logout).grid(row=0, column=1, sticky='e', padx=10, pady=10)
 
     def logout(self):

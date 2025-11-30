@@ -73,42 +73,42 @@ class MessagingApp:
         self.root.grid_rowconfigure(0, weight=1)
         # Frames
 
-        self.left = ttk.Frame(root)
-        self.left.grid(row=0, column = 0, padx=10, pady=10)
+        self.left = tk.Frame(root, bg="light grey")
+        self.left.grid(row=0, column = 0, padx=8, pady=8)
         self.left.grid_rowconfigure(0, weight=1)
         self.left.grid_columnconfigure(0, weight=1)
 
-        self.right = ttk.Frame(root)
-        self.right.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
+        self.right = tk.Frame(root, bg="light grey")
+        self.right.grid(row=0, column=1, padx=8, pady=8, sticky='nsew')
         self.right.grid_rowconfigure(0, weight=1)
         self.right.grid_columnconfigure(0, weight=1)
 
         # Sender
         ttk.Label(self.left, text="Sender:").grid(row=0, column=0)
         self.sender_var = tk.StringVar()
-        self.sender_box = ttk.Combobox(self.left, textvariable=self.sender_var,values=list(self.users["id"]))
+        self.sender_box = ttk.Combobox(self.left, textvariable=self.sender_var,values=list(self.users["id"]), width=13)
         self.sender_box.grid(row=0, column=1)
 
         # Receiver
         ttk.Label(self.left, text="Receiver:").grid(row=1, column=0)
         self.receiver_var = tk.StringVar()
-        self.receiver_box = ttk.Combobox(self.left, textvariable=self.receiver_var,values=list(self.users["id"]))
+        self.receiver_box = ttk.Combobox(self.left, textvariable=self.receiver_var,values=list(self.users["id"]), width=13)
         self.receiver_box.grid(row=1, column=1)
 
         # Message
         ttk.Label(self.left, text="Message:").grid(row=2, column=0)
-        self.msg_field = tk.Text(self.left, width=25, height=5)
+        self.msg_field = tk.Text(self.left, width=20, height=10)
         self.msg_field.grid(row=2, column=1)
 
         #Delete Button
-        ttk.Button(self.right, text="Delete Conversation", command=self.delete_conv).grid(row=3, column=0, pady=5)
+        ttk.Button(self.right, text="Delete Conversation", command=self.delete_conv).grid(row=3, column=0, pady=0)
 
         # Send button
         ttk.Button(self.left, text="Send", command=self.send_msg).grid(row=3, column=1, pady=5)
 
         # Conversation panel
         ttk.Label(self.right, text="Conversation:").grid(row=0, column=0)
-        self.conv_panel = tk.Text(self.right, width=50, height=25)
+        self.conv_panel = tk.Text(self.right, width=40, height=15)
         self.conv_panel.grid(row=1, column=0)
 
         ttk.Button(self.right, text="Load Conversation", command=self.load_conv).grid(row=2, column=0, pady=5)
