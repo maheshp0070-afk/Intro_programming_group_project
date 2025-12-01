@@ -25,17 +25,17 @@ class LoginPage(tk.Frame):
         users = UserManager.load_users()
 
         #Check username and password is in database
-        if username not in users["Username"].values or users.loc[username, "Password"] != password :
+        if username not in users["username"].values or users.loc[username, "password"] != password :
             messagebox.showerror("Error", "Incorrect username or password")
             return
 
-        role = users.loc[username, "Role"]
+        role = users.loc[username, "role"]
 
-        if role == "Admin":
+        if role == "admin":
             logging.info("Admin Logged In")
             self.controller.show_frame(AdminPage)
-        if role == "Logistics Co-ordinator":
-            logging.info("Logistics Co-ordinator Logged In")
+        if role == "Coordinator":
+            logging.info("Logistics Coordinator Logged In")
             pass
 
 if __name__ == '__main__':

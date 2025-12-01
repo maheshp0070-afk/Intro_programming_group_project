@@ -5,7 +5,7 @@ import numpy as np
 import os
 from datetime import datetime
 
-USERS_CSV = 'users.csv'  
+USERS_CSV = 'data/messages.csv'
 DATA_DIR = 'messages'
 os.makedirs(DATA_DIR, exist_ok=True)
 

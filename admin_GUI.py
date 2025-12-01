@@ -4,7 +4,6 @@ from admin_logic import *
 import subprocess
 import threading
 
-
 class AdminPage(tk.Frame):
     def __init__(self, App, controller):
         super().__init__(App)
@@ -19,7 +18,7 @@ class AdminPage(tk.Frame):
         self.canvas.pack(expand=True, fill="both")
 
         # Adds Background Photo
-        self.bg = tk.PhotoImage(file="background.png")
+        self.bg = tk.PhotoImage(file="Desert.png")
         self.canvas_bg = self.canvas.create_image(0, 0, image=self.bg, anchor="nw")
         self.canvas.tag_lower(self.canvas_bg)
 
@@ -27,7 +26,7 @@ class AdminPage(tk.Frame):
             -600, 360,
             text="Welcome, Admin!",
             font=("Comic Sans MS", 40, "bold"),
-            fill="white"
+            fill="forest green"
         )
 
         def slide_in():
@@ -79,26 +78,46 @@ class AdminPage(tk.Frame):
                 self.canvas.after(300, show_others)
 
         def show_others():
+            # Making Header
+            header = tk.Frame(self.canvas, borderwidth=2, bg='white')
+            self.canvas.create_window(640, 20, window=header, width=1280, height=45)
+            header.grid_columnconfigure(0, weight=1)  # left column expands to push logout to right
+            header.grid_columnconfigure(1, weight=0)
 
-            self.userslist_subframe = tk.Frame(self.canvas, bg="lightblue", width=500, height=500)  # dimensions for right plank window
-            self.canvas.create_window(960, 420, window=self.userslist_subframe)
+            # Header contents
+            tk.Label(header, text="Admin Dashboard", font=("Arial", 18), background='white').grid(row=0, column=0,
+                                                                                                  sticky='w', padx=10,
+                                                                                                  pady=10)
+            ttk.Button(header, text="Logout", command=self.logout).grid(row=0, column=1, sticky='e', padx=10, pady=10)
 
             # Create GUI for users list
+            self.userslist_subframe = tk.Frame(self.canvas, bg="lightblue", width=500,
+                                               height=500)  # dimensions for right plank window
+            self.canvas.create_window(960, 420, window=self.userslist_subframe)
+
             display_columns = ["Username", "Password", "Role", "Active?"]
             users = UserManager.load_users()
             users_treeview = ttk.Treeview(self.userslist_subframe, selectmode="browse", columns = display_columns, show = "headings", height = 14)
             style = ttk.Style()
-            style.configure("Treeview", font=("Comic Sans MS", 13, "bold"), rowheight=30, padding = (0,10))
-            style.configure("Treeview.Heading", font=("Comic Sans MS", 12, "bold"), padding=(0, 0))
-            users_treeview.pack()
+            style.configure("Treeview", font=("Comic Sans MS", 15, "bold"), rowheight=30, padding = (0,10))
+            style.configure("Treeview.Heading", font=("Comic Sans MS", 20, "bold"), rowheight = 60, padding=(5, 0))
+            users_treeview.pack(side="left", fill="both", expand=True)
 
             for col in display_columns:
                 users_treeview.heading(col, text=col)
                 users_treeview.column(col, width = 160, anchor = "center")
             for index, row in users.iterrows():
-                users_treeview.insert("", index, values = list(row))
+                users_treeview.insert("", index, values = list(row.fillna("")))
 
             users_treeview.column("Active?", width=100)
+
+            yscroll = ttk.Scrollbar(self.userslist_subframe, orient = "vertical", command = users_treeview.yview)
+            yscroll.pack(side="right", fill="y")
+            users_treeview.config(yscrollcommand=yscroll.set)
+
+            users_treeview.bind('<<TreeviewSelect>>',)
+
+           #Creates GUI For Messaging System
             self.msgsubframe = tk.Frame(self.canvas, width=500, height=280, bg ="light grey")  # dimensions for messaging widget
             self.canvas.create_window(320, 525, window=self.msgsubframe)
             from Msg_service import MessagingApp
@@ -110,24 +129,18 @@ class AdminPage(tk.Frame):
             # GUI for Creating User
             tk.Label(self.adduser_subframe, text="Username:", font=("Comic Sans MS", 15), bg="#b3794a").grid(row=0, column=0)
             tk.Label(self.adduser_subframe, text="Password:", font=("Comic Sans MS", 15), bg="#b3794a").grid(row=1, column=0)
-            new_username = tk.Entry(self.adduser_subframe, font=("Comic Sans MS", 15, "bold"), width = 35)
+            tk.Label(self.adduser_subframe, text="Role:", font = ("Comic Sans MS", 15), bg="#b3794a").grid(row=2, column=0)
+            new_username = tk.Entry(self.adduser_subframe, font=("Comic Sans MS", 15, "bold"), width = 35, validate="key", validatecommand = (self.register(lambda x: len(x)<20), '%P'))
             new_password = tk.Entry(self.adduser_subframe, font=("Comic Sans MS", 15, "bold"), width = 35,)
             new_username.grid(row=0, column = 1, padx=5)
             new_password.grid(row=1, column = 1, padx=5)
-            tk.Button(self.adduser_subframe, text="Create User", font = ("Comic Sans MS", 20, "bold"),
-                       command=lambda: UserManager.create_user(new_username.get(), new_password.get(), " ")).grid(row=2, columnspan=2)
+            user_role = ttk.Combobox(self.adduser_subframe)
+            user_role.grid(row=2, column=1, padx=5, sticky = 'w')
+            user_role.config(values = ("Coordinator", "Scout Leader"), width = 34, font=("Comic Sans MS", 15, "bold"), state="readonly")
+            tk.Button(self.adduser_subframe, text="Create User", bg = '#b3794a', font = ("Comic Sans MS", 18, "bold"),
+                       command=lambda: UserManager.create_user(new_username.get(), new_password.get(), user_role.get(), users_treeview)).grid(row=3, columnspan=2)
 
             threading.Thread(target=play_startup_sound, daemon=True).start()
-
-        # Making Header
-        header = tk.Frame(self.canvas, borderwidth=2, bg = 'white')
-        self.canvas.create_window(640, 20, window=header, width = 1280, height = 45)
-        header.grid_columnconfigure(0, weight=1) # left column expands to push logout to right
-        header.grid_columnconfigure(1, weight=0)
-
-        # Header contents
-        tk.Label(header, text="Admin Dashboard", font=("Arial", 18), background='white').grid(row=0, column=0, sticky='w', padx=10, pady=10)
-        ttk.Button(header, text="Logout", command=self.logout).grid(row=0, column=1, sticky='e', padx=10, pady=10)
 
     def logout(self):
         from login_page import LoginPage
