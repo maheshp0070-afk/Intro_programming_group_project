@@ -31,7 +31,7 @@ canvas.tag_lower(canvas_bg)
 
 welcome = canvas.create_text(
     -600, 360,
-    text = "Welcome, Logistics Coordinator!", #Don't make this username as it could be too long..
+    text = f"Welcome, {coordinator.username}!",
     font = ("Comic Sans MS", 40, "bold"),
     fill = "forest green"
 )
@@ -157,6 +157,20 @@ def show_others(): #maybe also add a key above the map for tent icons
             tent_icons[item] = tent
             create_bind(item)
 
+    #Header/ribbon:
+
+    header = tk.Frame(canvas, borderwidth=2, bg='#1095d6')
+    canvas.create_window(640, 20, window=header, width=1280, height=45)
+    header.grid_columnconfigure(0, weight=1)  # left column expands to push logout to right
+    header.grid_columnconfigure(1, weight=0)
+
+    # Header contents
+    tk.Label(header, text="Logistics Coordinator", font=("Comic Sans MS", 18), background='#1095d6', fg="white").grid(row=0, column=0,
+                                                                                          sticky='w', padx=10,
+                                                                                          pady=10)
+    ttk.Button(header, text="Logout").grid(row=0, column=1, sticky='e', padx=10, pady=10) #add command 'logout' to this
+
+
 def on_click(event, item):
 
     if messagebox.askyesno(f"{tent_icons.get(item)}", f"{tent_states.get(tent_icons.get(item))} {tent_icons.get(item)} located at ({event.x}, {event.y}). Go to location?"):
@@ -173,11 +187,11 @@ def on_enter(item):
 
         mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_highlighted)
 
-    if tent_states.get(tent_icons.get(item)) == 'Available':
+    elif tent_states.get(tent_icons.get(item)) == 'Available':
 
         mapsubcanvas.itemconfig(item, image=mapsubcanvas.available_highlighted)
 
-    if tent_states.get(tent_icons.get(item)) == 'Planned':
+    elif tent_states.get(tent_icons.get(item)) == 'Planned':
 
         mapsubcanvas.itemconfig(item, image=mapsubcanvas.planned_highlighted)
 
@@ -187,11 +201,11 @@ def on_leave(item):
 
         mapsubcanvas.itemconfig(item, image=mapsubcanvas.tent_normal)
 
-    if tent_states.get(tent_icons.get(item)) == 'Available':
+    elif tent_states.get(tent_icons.get(item)) == 'Available':
 
         mapsubcanvas.itemconfig(item, image=mapsubcanvas.available)
 
-    if tent_states.get(tent_icons.get(item)) == 'Planned':
+    elif tent_states.get(tent_icons.get(item)) == 'Planned':
 
         mapsubcanvas.itemconfig(item, image=mapsubcanvas.planned)
 
@@ -310,8 +324,7 @@ def button_select():
 
             lcl.Camp.save_camps('camps.csv')
 
-#Need to add text in the window as a user help/info, i.e. what day, overnight and exped means. Also need to dosomething similar for every window in app, like colour key for dashboard.
-
+#Need to add text in the window as a user help/info, i.e. what day, overnight and exped means. Also need to do something similar for every window in app, like colour key for dashboard.
 
 def get_years(): #check whether we can just use a list instead of function
     current_date = datetime.datetime.now()
