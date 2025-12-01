@@ -176,3 +176,4 @@ class Leader(User):
 
         camps = [camp for camp in camps_dict.values() if camp.leader == self.username]
         return camps
+
