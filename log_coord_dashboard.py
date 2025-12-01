@@ -2,6 +2,20 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import datetime
+import log_coord_logic as lcl
+
+lcl.Admin.load_users('users.csv')
+lcl.Coordinator.load_users('users.csv')
+lcl.Leader.load_users('users.csv')
+lcl.User.load_all_users('users.csv')
+lcl.Camp.load_camps('camps.csv')
+
+for user in lcl.all_users.values():
+
+    if user.role == 'coordinator':
+
+        coordinator = user
+        break
 
 root = tk.Tk()
 root.geometry("1280x720")
@@ -87,11 +101,11 @@ photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
 
 tent_icons = {}
 
-positions = {'tent_1': (78, 250), 'tent_2': (250, 83), 'tent_3': (361, 139), 'tent_4': (194, 250), 'tent_5': (361, 250), 'tent_6': (250, 361), 'tent_7': (333, 389), 'tent_8': (278, 206)}
+positions = {'Sonelgaz Aokas': (310, 40), 'Akabli': (190, 330), 'Tassili n\'Ajjer': (365, 270), 'Timimoun': (210, 220), 'Chréa National Park': (220, 100), 'Tindouf': (50, 245), 'Hoggar mountains': (333, 389), 'Hassi Messaoud': (340, 170)}
 
-tent_states = {'tent_1': 'Ongoing', 'tent_2': 'Ongoing', 'tent_3': 'Ongoing', 'tent_4': 'Planned', 'tent_5': 'Available', 'tent_6': 'Available', 'tent_7': 'Available', 'tent_8': 'Available'}
+tent_states = {'Sonelgaz Aokas': 'Ongoing', 'Akabli': 'Ongoing', 'Tassili n\'Ajjer': 'Ongoing', 'Timimoun': 'Planned', 'Chréa National Park': 'Available', 'Tindouf': 'Available', 'Hoggar mountains': 'Available', 'Hassi Messaoud': 'Available'}
 
-def show_others():
+def show_others(): #maybe also add a key above the map for tent icons
 
     global mapsubframe
     mapsubframe = tk.Frame(canvas, bg="lightblue", width=500, height=500) #dimensions for right plank window
@@ -144,8 +158,12 @@ def show_others():
             create_bind(item)
 
 def on_click(event, item):
-    pass  # add logic func here
+
     if messagebox.askyesno(f"{tent_icons.get(item)}", f"{tent_states.get(tent_icons.get(item))} {tent_icons.get(item)} located at ({event.x}, {event.y}). Go to location?"):
+        global current_location
+        current_location = tent_icons.get(item) #maybe don't use get, just use tent_icons[item]
+        loc_title = tk.Label(canvas, text=f"{current_location}", font=("Comic Sans MS", 30), fg="white", bg="#1095d6")
+        loc_title.place(x=640, y=20, anchor="n")
         show_camps_listbox()
         show_create_camp_window()
 
@@ -219,7 +237,6 @@ for i in range(3):
 Nameframe = tk.Frame(makecampframe, bg="lightblue")
 Nameframe.pack(side="top", padx=5, pady=10, fill="both", expand=True)
 
-
 months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 days = [str(i) for i in range(1, 32)]
 
@@ -230,34 +247,68 @@ def button_select():
     selected_eyear = edropdown_years.get()
     selected_emonth = edropdown_months.get()
     selected_eday = edropdown_days.get()
-    camp_name_input = camp_name_entry.get()
+    camp_name_input = camp_name_entry.get().strip()
     food_input = food_entry.get()
     pay_input = scout_payment.get()
     if (selected_syear == "Select a start year" or selected_smonth == "Select a start month" or selected_sday == "Select a start day" or selected_eyear == "Select an end year" or selected_emonth == "Select an end month" or selected_eday == "Select an end day"):
         tk.messagebox.showerror("Entry date error","Please enter dates in all the dropdown boxes")
-        return None, None
+       
     elif camp_name_input == "":
         tk.messagebox.showerror("Entry camp name error","Please enter a name for the camp")
-        return None, None
+
+    elif camp_name_input in lcl.camps:
+        tk.messagebox.showerror("Entry camp name error","Camp name already exists, please enter a different name")
+        
     elif food_input == "":
         tk.messagebox.showerror("Entry food stock error","Please enter a whole number for food stock per day")
-        return None, None
+       
     elif pay_input == "":
         tk.messagebox.showerror("Entry payment error","Please enter a number for daily payment rate")
-        return None, None
+        
     else:
-        selected_sdate = datetime.datetime(int(selected_syear), months.index(selected_smonth) + 1, int(selected_sday))
-        selected_edate = datetime.datetime(int(selected_eyear), months.index(selected_emonth) + 1, int(selected_eday))
+
+        try:
+            selected_sdate = datetime.datetime(int(selected_syear), months.index(selected_smonth) + 1, int(selected_sday))
+            selected_edate = datetime.datetime(int(selected_eyear), months.index(selected_emonth) + 1, int(selected_eday))
+
+        except:
+
+            tk.messagebox.showerror("Date error","One or more of the selected dates is non-existent")
+            return
 
         if selected_sdate > selected_edate:
             tk.messagebox.showerror("Date error","Error!, camp end must be after start")
-            return None, None
+            
         elif selected_sdate < datetime.datetime.now() or selected_edate < datetime.datetime.now():
             tk.messagebox.showerror("Date error","Error!, camp must be set in the future")
-            return None, None
+            
         else:
-            tk.messagebox.showinfo("Creation success", f"You have successfully created camp: {camp_name_input} on the selected dates: {selected_sdate.strftime('%Y-%m-%d')} to {selected_edate.strftime('%Y-%m-%d')} with {food_input} food stock per day {pay_input} and daily payment rate.") #location to be added, e.g. akfadou. Also to be formatted diff if day/overnight/expedition
-            return selected_sdate, selected_edate
+            tk.messagebox.showinfo("Creation success", f"You have successfully created camp: {camp_name_input} on the selected dates: {selected_sdate.strftime('%Y-%m-%d')} to {selected_edate.strftime('%Y-%m-%d')} with food stock of {food_input} per day and daily payment rate of {pay_input} دج ") #location to be added, e.g. akfadou. Also to be formatted diff if day/overnight/expedition
+            
+            if selected_sdate == selected_edate:
+
+                camp_type = 'day'
+
+            elif (selected_edate - selected_sdate).days == 1:
+
+                camp_type = 'overnight'
+
+            else:
+
+                camp_type = 'expedition'
+            
+            coordinator.create_camp(
+                camps_dict = lcl.camps,
+                name = camp_name_input,
+                location = current_location,
+                camp_type = camp_type,
+                start_date = selected_sdate,
+                end_date = selected_edate,
+                food_supply_per_day = int(food_input),
+                pay = float(pay_input)
+            )
+
+            lcl.Camp.save_camps('camps.csv')
 
 #Need to add text in the window as a user help/info, i.e. what day, overnight and exped means. Also need to dosomething similar for every window in app, like colour key for dashboard.
 
@@ -266,7 +317,6 @@ def get_years(): #check whether we can just use a list instead of function
     current_date = datetime.datetime.now()
     years = [str(current_date.year), str(current_date.year + 1)]
     return years
-
 
 create_camp_label = tk.Label(Nameframe, text="Please enter camp name:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
 create_camp_label.grid(column = 0, row = 0, pady=5)
@@ -306,7 +356,6 @@ edropdown_months = ttk.Combobox(endframe, values=months, state="readonly")
 edropdown_months.set("Select an end month")
 edropdown_months.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
 
-
 edropdown_days = ttk.Combobox(endframe, values=days, state="readonly")
 edropdown_days.set("Select an end day")
 edropdown_days.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
@@ -316,6 +365,7 @@ date_button.grid(row=3, column=1, pady=20)
 
 create_camp_window = canvas.create_window(960, 400, window=makecampframe, width=500, height=500)
 canvas.itemconfigure(create_camp_window, state="hidden")
+
 
 def show_create_camp_window():
 
