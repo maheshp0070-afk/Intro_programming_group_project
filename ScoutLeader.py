@@ -282,12 +282,19 @@ class ScoutLeader(User):
             print(f"  Assigned Campers: {assigned if pd.notna(assigned) and str(assigned).strip() else 'None'}")
             print()
 
-    def assign_food_to_camper(self,camper_id, food_number):
+    def assign_food_to_camper(self, camper_id, food_number):
         """Assigns food to camper"""
         df_campers = pd.read_csv("data/campers.csv", index_col="camper_id", dtype={"food": "Int64"})
-        if df_campers.loc[camper_id, "food"] != food_number:
+        
+        if camper_id not in df_campers.index:
+            raise ValueError(f"Camper {camper_id} does not exist")
+        
+        current_food = df_campers.loc[camper_id, "food"]
+        
+        """Check if current_food is NaN or not equal to food_number"""
+        if pd.isna(current_food) or current_food != food_number:
             df_campers.loc[camper_id, "food"] = food_number
-            df_campers.to_csv("data/campers.csv")
+            df_campers.to_csv("data/campers.csv", index=True)
             print(f"Camper {camper_id} assigned {food_number} units of food")
         else:
             print(f"Camper {camper_id} already assigned {food_number} units of food")
@@ -320,5 +327,5 @@ class ScoutLeader(User):
 
 
 leaders = ScoutLeader.load_leaders("data/users.csv")
-#leaders["leader1"].remove_activity_outcomes(2, "Went well!")
-#print(leaders["leader1"].assign_campers_to_activity(3,1))
+
+
