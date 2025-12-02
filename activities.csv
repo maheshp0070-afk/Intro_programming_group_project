@@ -1,0 +1,6 @@
+activity_id,camp_name,activity_name,date,start_time,end_time,max_capacity,assigned_campers,extra_notes
+1,firstcamp,Hiking,16/11/2025,09:00,12:00,50,,
+2,firstcamp,Archery,16/11/2025,14:00,16:00,30,,
+3,firstcamp,Campfire,16/11/2025,19:00,21:00,100,,
+4,thirdcamp,Hiking,17/11/2025,09:00,12:00,50,,
+5,secondcamp,Rock Climbing,17/11/2025,08:00,17:00,25,,
