@@ -1,7 +1,7 @@
 camper_id,first_name,last_name,age,camps,activities,food
-1,Mei,Brown,14,firstcamp,,20
-2,Rania,Diallo,17,firstcamp,,10
-3,Jamal,Abebe,11,firstcamp,,53
+1,Mei,Brown,14,firstcamp,,20.0
+2,Rania,Diallo,17,firstcamp,,10.0
+3,Jamal,Abebe,11,firstcamp,,53.0
 4,Sofia,Petrov,14,firstcamp,,
 5,Fatima,Al-Farsi,10,firstcamp,,
 6,Santiago,Abebe,13,firstcamp,,
