@@ -481,9 +481,134 @@ class ScoutLeader(User):
                 "activity_id": activity,
                 "notes": cell
             }
+        
+    def get_leader_statistics(self):
+        """Returns statistics for all camps led by this scout leader"""
+        df_camps = pd.read_csv("data/camps.csv", index_col="name")
+        df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
+        df_activities = pd.read_csv("data/activities.csv", index_col="activity_id", dtype={"assigned_campers": str})
+        
+        """Get all camps for this leader"""
+        leader_camps = df_camps[df_camps["scout_leader"] == self.username]
+        
+        if leader_camps.empty:
+            return {
+                "success": False,
+                "message": f"{self.username} has not been assigned to any camps",
+                "leader": self.username,
+                "camps": [],
+                "overall": {}
+            }
+        
+        camp_stats = []
+        overall_stats = {
+            "total_camps": 0,
+            "total_campers": 0,
+            "total_activities": 0,
+            "total_activity_slots": 0,
+            "total_activity_capacity": 0,
+            "total_food_supply": 0,
+            "total_food_demand": 0,  
+            "total_pay": 0   
+        }
+        
+        for camp_name, camp_data in leader_camps.iterrows():
+            camp_campers = df_campers[df_campers["camps"] == camp_name]
+            camp_activities = df_activities[df_activities["camp_name"] == camp_name]
+            
+            """Participation stats"""
+            total_campers = len(camp_campers)
+            assigned_campers = len(camp_campers[camp_campers["camps"] != "Na"])
+            participation_rate = (assigned_campers / total_campers * 100) if total_campers > 0 else 0
+            
+            """Activity stats"""
+            total_activities = len(camp_activities)
+            total_activity_capacity = 0
+            total_activity_slots_filled = 0
+            
+            for _, activity in camp_activities.iterrows():
+                total_activity_capacity += activity["max_capacity"]
+                assigned = activity["assigned_campers"]
+                if pd.notna(assigned) and str(assigned).strip():
+                    slot_count = len(str(assigned).split(","))
+                    total_activity_slots_filled += slot_count
+            
+            activity_utilisation = (total_activity_slots_filled / total_activity_capacity * 100) if total_activity_capacity > 0 else 0
+            
+            """Food resources"""
+            total_food_supply = camp_data["food_supply_per_day"]
+            total_food_demand = camp_data["food_demand_per_day"]
+            food_surplus = total_food_supply - total_food_demand
+            
+            """Pay info"""
+            camp_pay = camp_data["pay"]
+
+            """Additional Comment""" 
+            additional_comments = []
+            for _, activity in camp_activities.iterrows():
+                notes = activity.get("extra_notes", "")
+                if pd.notna(notes) and str(notes).strip():
+                    additional_comments.append({
+                        "activity_id": activity.name,
+                        "activity_name": activity["activity_name"],
+                        "comment": str(notes).strip()
+                    })
+            
+            camp_stats.append({
+                "camp_name": camp_name,
+                "location": camp_data["location"],
+                "camp_type": camp_data["type"],
+                "duration": f"{camp_data['start_date']} to {camp_data['end_date']}",
+                "participation": {
+                    "total_campers": int(total_campers),
+                    "assigned_campers": int(assigned_campers),
+                    "participation_rate": round(participation_rate, 1)
+                },
+                "activities": {
+                    "total_activities": int(total_activities),
+                    "total_capacity": int(total_activity_capacity),
+                    "total_filled": int(total_activity_slots_filled),
+                    "utilisation_rate": round(activity_utilisation, 1)
+                },
+                "food": {
+                    "daily_supply": int(total_food_supply),
+                    "daily_demand": int(total_food_demand),
+                    "daily_surplus": int(food_surplus)
+                },
+                "pay": int(camp_pay),
+                "additional_comments": additional_comments
+            })
+            
+            """ Update overall stats"""
+            overall_stats["total_camps"] += 1
+            overall_stats["total_campers"] += total_campers
+            overall_stats["total_activities"] += total_activities
+            overall_stats["total_activity_slots"] += total_activity_slots_filled
+            overall_stats["total_activity_capacity"] += total_activity_capacity
+            overall_stats["total_food_supply"] += total_food_supply
+            overall_stats["total_food_demand"] += total_food_demand
+            overall_stats["total_pay"] += camp_pay
+        
+        """Calculate overall rates"""
+        overall_activity_utilisation = (overall_stats["total_activity_slots"] / overall_stats["total_activity_capacity"] * 100) if overall_stats["total_activity_capacity"] > 0 else 0
+        overall_food_surplus = overall_stats["total_food_supply"] - overall_stats["total_food_demand"]
+        
+        overall_stats["activity_utilisation_rate"] = round(overall_activity_utilisation, 1)
+        overall_stats["food_surplus"] = overall_food_surplus
+        
+        return {
+            "success": True,
+            "leader": self.username,
+            "camps": camp_stats,
+            "overall": overall_stats
+        }
+            
 
 
 
 leaders = ScoutLeader.load_leaders("data/users.csv")
-print(leaders["leader1"].view_camper_details(1))
+print(leaders["leader1"].get_leader_statistics())
+
+
+
 
