@@ -602,6 +602,13 @@ class ScoutLeader(User):
             "camps": camp_stats,
             "overall": overall_stats
         }
+    
+    def create_leader_dict(self, dict, co_ords):
+        leader_camps = {}
+        for key, value in dict.items():
+            if value.location in co_ords:
+                leader_camps[value.location] = co_ords[value.location]
+        return leader_camps
             
 
 
