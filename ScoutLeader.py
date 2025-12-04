@@ -482,6 +482,28 @@ class ScoutLeader(User):
                 "notes": cell
             }
         
+    def load_camps_for_leader(self, file):
+        df_camps = pd.read_csv(file)
+        camps = {}
+
+        for index, row in def_camps.iterrows():
+            if row['scout_leader'] == self.username:
+                camp = Camp(
+                    name=row['name'],
+                    location=row['location'],
+                    type=row['type'],
+                    start_date=datetime.datetime.strptime(row['start_date'], '%d/%m/%Y'),
+                    end_date=datetime.datetime.strptime(row['end_date'], '%d/%m/%Y'),
+                    food_supply_per_day=(row['food_supply_per_day']),
+                    food_demand_per_day=(row['food_demand_per_day']),
+                    scout_leader=row['scout_leader'],
+                    pay=round(float(row['pay']), 2)
+                    )
+
+                camps[camp.name] = camp
+        return camps
+        
+        
     def get_leader_statistics(self):
         """Returns statistics for all camps led by this scout leader"""
         df_camps = pd.read_csv("data/camps.csv", index_col="name")
