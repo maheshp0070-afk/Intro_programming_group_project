@@ -1,6 +1,0 @@
-Username,Password,Role,is_active
-Admin,Password,Admin,True
-Logistics,"",Logistics Coordinator,True
-Scout3,,Scout Leader,True
-scou4,,Scout Leader,True
-Scout5,,Scout Leader,True
