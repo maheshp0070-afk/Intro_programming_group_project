@@ -97,7 +97,7 @@ photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
 
 tent_icons = {}
 
-location_coords = {'Sonelgaz Aokas': (310, 40), 'Akabli': (190, 330), 'Tassili Ajjer': (365, 270), 'Timimoun': (210, 220), 'Chréa National Park': (220, 100), 'Tindouf': (50, 245), 'Hoggar mountains': (333, 389), 'Hassi Messaoud': (340, 170)}
+location_coords = {'Sonelgaz Aokas': (310, 40), 'Akabli': (190, 330), 'Tassili n\'Ajjer': (365, 270), 'Timimoun': (210, 220), 'Chréa National Park': (220, 100), 'Tindouf': (50, 245), 'Hoggar mountains': (333, 389), 'Hassi Messaoud': (340, 170)}
 
 # creates a dictionary of camps for only the selected leader
 #def create_leader_dict(dict):
@@ -126,7 +126,7 @@ def show_others(): #maybe also add a key above the map for tent icons
 
 
 
-    positions = ScoutLeader.create_leader_dict(camp_dict)
+    positions = leaders[placeholder].create_leader_dict(camp_dict, location_coords)
     print(positions)
 
 
