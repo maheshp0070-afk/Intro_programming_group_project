@@ -1,6 +1,7 @@
 username,password,role,status
-admin,,admin,TRUE
-coordinator,,coordinator,TRUE
-leader1,,leader,TRUE
-leader2,,leader,TRUE
-leader3,,leader,TRUE
+admin,,admin,True
+coordinator,,coordinator,True
+leader1,,leader,True
+leader2,,leader,True
+leader3,,leader,True
+
