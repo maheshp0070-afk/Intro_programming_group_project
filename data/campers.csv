@@ -1,7 +1,7 @@
 camper_id,first_name,last_name,age,camps,activities,food
-1,Mei,Brown,14,firstcamp,,20
-2,Rania,Diallo,17,firstcamp,,10
-3,Jamal,Abebe,11,firstcamp,,53
+1,Mei,Brown,14,firstcamp,,20.0
+2,Rania,Diallo,17,firstcamp,,10.0
+3,Jamal,Abebe,11,firstcamp,,53.0
 4,Sofia,Petrov,14,firstcamp,,
 5,Fatima,Al-Farsi,10,firstcamp,,
 6,Santiago,Abebe,13,firstcamp,,
@@ -99,7 +99,7 @@ camper_id,first_name,last_name,age,camps,activities,food
 98,Taylor,Haddad,8,firstcamp,,
 99,Santiago,Torres,15,firstcamp,,
 100,Hiroshi,Nair,17,firstcamp,,
-101,Camila,Fischer,11,firstcamp,
+101,Camila,Fischer,11,firstcamp,,
 102,Rohan,Abebe,11,firstcamp,,
 103,Jordan,Sharma,14,firstcamp,,
 104,Camila,Haddad,17,firstcamp,,
