@@ -1,14 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
-from admin_logic import *
+from admin_logic import UserManager
 import subprocess
 import threading
 
 class AdminPage(tk.Frame):
-    def __init__(self, App, controller):
+    def __init__(self, App):
         super().__init__(App)
-        self.controller = controller
-
         def play_startup_sound():
             self.sound_file = "sans..wav"
             subprocess.call(["afplay", self.sound_file])
@@ -95,7 +93,7 @@ class AdminPage(tk.Frame):
                                                height=500, relief = 'solid', bd=1)  # dimensions for right plank window
             self.canvas.create_window(960, 420, window=self.userslist_subframe)
 
-            tk.Label(self.userslist_subframe, text= "Users List", font=("Comic Sans MS", 20, "bold"), bg="white").pack()
+            tk.Label(self.userslist_subframe, text= "Users List", font=("Comic Sans MS", 20, "bold"), bg = '#b3794a').pack(fill = "both")
             display_columns = ["Username", "Password", "Role", "Active?"]
             users = UserManager.load_users()
             users["role"] = users["role"].str.title()
@@ -109,7 +107,10 @@ class AdminPage(tk.Frame):
                 users_treeview.heading(col, text=col)
                 users_treeview.column(col, width = 160, anchor = "center")
             for index, row in users.iterrows():
-                users_treeview.insert("", index, values = list(row.fillna("")))
+                if row["username"] == "admin":
+                    users_treeview.insert("", index, values = list(row.fillna("")), tags = ("disabled"))
+                else:
+                    users_treeview.insert("", index, values = list(row.fillna("")))
 
             users_treeview.column("Active?", width=100)
 
@@ -118,19 +119,43 @@ class AdminPage(tk.Frame):
             yscroll.pack(side="right", fill="y")
             users_treeview.config(yscrollcommand=yscroll.set)
 
+            #Add Edit/Delete User Window
             def on_select(event):
-                self.edituserframe = tk.Frame(self.userslist_subframe, bg="white", bd=2, relief="raised")
-                self.edituserframe.place(relx=0.5, rely=0.5, anchor="center", width=595, height=500)
-                tk.Button(self.edituserframe, text="Exit",command = close).place(relx=1, rely=0, anchor="ne")
-                tr
+                if "disabled" in users_treeview.item(users_treeview.focus(), ""):
+                    return "break"
+                else:
+                    select_row = users_treeview.item(users_treeview.focus(), "values")
+                    selected_user  = selectrow[0]
+                    self.edituserframe = tk.Frame(self.userslist_subframe, bg="#b3794a", bd=2, relief="raised")
+                    self.edituserframe.place(relx=0.5, rely=0.5, anchor="center", width=600, height=500)
 
-            users_treeview.bind('<<TreeviewSelect>>', on_select)
+                    tk.Label(self.edituserframe, text="New Username:", font=("Comic Sans MS", 15), bg="#b3794a",fg="white").grid(row=1, column=0, sticky = 'e')
+                    tk.Label(self.edituserframe, text="New Password:", font=("Comic Sans MS", 15), bg="#b3794a",fg="white").grid(row=2, column=0, sticky = 'e')
+                    edited_username = tk.Entry(self.edituserframe, font=("Comic Sans MS", 15, "bold"), width=35,
+                                            validate="key",
+                                            validatecommand=(self.register(lambda x: len(x) < 20), '%P'))
+                    edited_password = tk.Entry(self.edituserframe, font=("Comic Sans MS", 15, "bold"), width=35,
+                                            validate="key",
+                                            validatecommand=(self.register(lambda x: len(x) < 20), '%P'))
+                    edited_username.grid(row=1, column=1, padx=5)
+                    edited_password.grid(row=2, column=1, padx=5)
+                    tk.Button(self.edituserframe, text="Confirm Changes", bg='#b3794/a',
+                              font=("Comic Sans MS", 18, "bold"),
+                              command=lambda: UserManager.edit_user(selected_user, edited_username, edited_password,)).grid(row=3, column=0, sticky = 'e')
+                    tk.Button(self.edituserframe, text=  "Delete User", bg='#b3794a', font = ("Comic Sans MS", 18, "bold"), command = lambda: UserManager.del_user(selected_user)).grid(row=3, column = 1, sticky = 'e')
+                    tk.Button(self.edituserframe, text="Cancel", command=close, font=("Comic Sans MS", 18, "bold")).grid(row=3, column=1, sticky='w')
 
+                    for i in range(4):
+                        self.edituserframe.rowconfigure(i, weight=1)
+                    self.edituserframe.columnconfigure(0, weight=1)
+                    self.edituserframe.columnconfigure(1, weight=1)
             def close():
                 self.edituserframe.destroy()
 
+            users_treeview.bind('<Double-1>', on_select)
+
            #Creates GUI For Messaging System
-            self.msgsubframe = tk.Frame(self.canvas, width=500, height=280, bg ="light grey", relief = 'solid', bd=1)  # dimensions for messaging widget
+            self.msgsubframe = tk.Frame(self.canvas, width=500, height=280, bg ="#b3794a", relief = 'solid', bd=1)  # dimensions for messaging widget
             self.canvas.create_window(320, 525, window=self.msgsubframe)
             from Msg_service import MessagingApp
             MessagingApp(self.msgsubframe)
@@ -143,7 +168,7 @@ class AdminPage(tk.Frame):
             tk.Label(self.adduser_subframe, text="New Password:", font=("Comic Sans MS", 15), bg="#b3794a", fg="white").grid(row=1, column=0)
             tk.Label(self.adduser_subframe, text="Select Role:", font = ("Comic Sans MS", 15), bg="#b3794a", fg="white").grid(row=2, column=0)
             new_username = tk.Entry(self.adduser_subframe, font=("Comic Sans MS", 15, "bold"), width = 35, validate="key", validatecommand = (self.register(lambda x: len(x)<20), '%P'))
-            new_password = tk.Entry(self.adduser_subframe, font=("Comic Sans MS", 15, "bold"), width = 35,)
+            new_password = tk.Entry(self.adduser_subframe, font=("Comic Sans MS", 15, "bold"), width = 35, validate = "key", validatecommand = (self.register(lambda x: len(x)<20), '%P'))
             new_username.grid(row=0, column = 1, padx=5)
             new_password.grid(row=1, column = 1, padx=5)
             user_role = ttk.Combobox(self.adduser_subframe)
@@ -155,13 +180,16 @@ class AdminPage(tk.Frame):
             #threading.Thread(target=play_startup_sound, daemon=True).start()
 
     def logout(self):
+
         from login_page import LoginPage
-        self.controller.show_frame(LoginPage)
+        self.destroy()
+        login_window = LoginPage(self.master)
+        login_window.pack(fill = "both", expand = True)
 
 if __name__ == '__main__':
     root = tk.Tk()
     root.title("Admin Page Test")
     root.geometry("1280x720")
-    page = AdminPage(root, root)
+    page = AdminPage(root)
     page.pack(fill = 'both', expand = True)
     root.mainloop()
