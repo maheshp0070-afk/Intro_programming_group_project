@@ -3,6 +3,7 @@ from tkinter import messagebox
 from tkinter import ttk
 import datetime
 import log_coord_logic as lcl
+from Msg_service import MessagingApp
 
 lcl.Admin.load_users('users.csv')
 lcl.Coordinator.load_users('users.csv')
@@ -103,7 +104,17 @@ tent_icons = {}
 
 positions = {'Sonelgaz Aokas': (310, 40), 'Akabli': (190, 330), 'Tassili n\'Ajjer': (365, 270), 'Timimoun': (210, 220), 'Chréa National Park': (220, 100), 'Tindouf': (50, 245), 'Hoggar mountains': (333, 389), 'Hassi Messaoud': (340, 170)}
 
-tent_states = {'Sonelgaz Aokas': 'Ongoing', 'Akabli': 'Ongoing', 'Tassili n\'Ajjer': 'Ongoing', 'Timimoun': 'Planned', 'Chréa National Park': 'Available', 'Tindouf': 'Available', 'Hoggar mountains': 'Available', 'Hassi Messaoud': 'Available'}
+tent_states = {'Sonelgaz Aokas': 'Available', 'Akabli': 'Available', 'Tassili n\'Ajjer': 'Available', 'Timimoun': 'Available', 'Chréa National Park': 'Available', 'Tindouf': 'Available', 'Hoggar mountains': 'Available', 'Hassi Messaoud': 'Available'}
+
+for camp in lcl.camps.values():
+
+    if camp.end_date + datetime.timedelta(days=1) > datetime.datetime.today() and camp.start_date < datetime.datetime.today():
+
+        tent_states[camp.location] = 'Ongoing'
+
+    elif camp.start_date > datetime.datetime.today() and tent_states[camp.location] != 'Ongoing':
+
+        tent_states[camp.location] = 'Planned'
 
 def show_others(): #maybe also add a key above the map for tent icons
 
@@ -126,16 +137,39 @@ def show_others(): #maybe also add a key above the map for tent icons
     mapsubcanvas.create_image(250, 250, image=algeria_map)
 
     global msgsubframe
-    msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white") # dimensions for messaging widget
+    msgsubframe = tk.Frame(canvas, width=500, height=280, bg="light grey", relief='solid',bd=1) # dimensions for messaging widget
     global msg_window
     msg_window = canvas.create_window(320,525, window = msgsubframe)
-    #msging system here
+    #msging system here:
+    MessagingApp(msgsubframe)
 
     global ntfsubframe
     ntfsubframe = tk.Frame(canvas, width=500, height=120, bg="white") # dimensions for notification widget
     global ntf_window
-    ntf_window = canvas.create_window(320,190, window = ntfsubframe)
-    #see below how we implemented map to other subframe to implement further
+    ntf_window = canvas.create_window(320,190, window = ntfsubframe, width=500, height=120)
+    #ntf system here:
+    ntftitle = tk.Label(ntfsubframe, text="Notifications - Camps low on food stock:", font=("Comic Sans MS", 12), bg="white", fg="black")
+    ntftitle.pack()
+    lowcamps =  [camp for camp in lcl.camps.values() if camp.food_supply_per_day < camp.food_demand_per_day and camp.end_date + datetime.timedelta(days=1) >= datetime.datetime.today()]
+    ntftext = ttk.Treeview(ntfsubframe, columns=("Camp Name", "Location", "Scout Leader"), show="headings")
+
+    ntftext.heading("Camp Name", text="Camp Name")
+    ntftext.heading("Location", text="Location")
+    ntftext.heading("Scout Leader", text="Scout Leader")
+
+    ntftext.column("Camp Name", width=100, anchor='center')
+    ntftext.column("Location", width=100, anchor='center')
+    ntftext.column("Scout Leader", width=100, anchor='center')
+
+    for camp in lowcamps:
+
+        ntftext.insert("",values=(camp.name, camp.location, camp.leader), index='end')
+
+    style = ttk.Style()
+    style.configure("Treeview", font=("Comic Sans MS", 10))
+    style.configure("Treeview.Heading", font=("Comic Sans MS", 10, "bold"))
+
+    ntftext.pack(expand=True, fill="both")
 
     for tent, (x, y) in positions.items():
 
@@ -157,6 +191,8 @@ def show_others(): #maybe also add a key above the map for tent icons
             tent_icons[item] = tent
             create_bind(item)
 
+        tk.Label(mapsubframe, text=f"{tent}", font=("Comic Sans MS", 10), bg="white").place(x=x, y=y+30, anchor="n")
+
     #Header/ribbon:
 
     header = tk.Frame(canvas, borderwidth=2, bg='#1095d6')
@@ -168,7 +204,7 @@ def show_others(): #maybe also add a key above the map for tent icons
     tk.Label(header, text="Logistics Coordinator", font=("Comic Sans MS", 18), background='#1095d6', fg="white").grid(row=0, column=0,
                                                                                           sticky='w', padx=10,
                                                                                           pady=10)
-    ttk.Button(header, text="Logout").grid(row=0, column=1, sticky='e', padx=10, pady=10) #add command 'logout' to this
+    ttk.Button(header, text="Logout",  command = lambda: root.destroy() if messagebox.askyesno("Logout","Are you sure you want to logout?") else None).grid(row=0, column=1, sticky='e', padx=10, pady=10)
 
 
 def on_click(event, item):
@@ -178,8 +214,8 @@ def on_click(event, item):
         current_location = tent_icons.get(item) #maybe don't use get, just use tent_icons[item]
         loc_title = tk.Label(canvas, text=f"{current_location}", font=("Comic Sans MS", 30), fg="white", bg="#1095d6")
         loc_title.place(x=640, y=20, anchor="n")
-        show_camps_listbox()
-        show_create_camp_window()
+        show_camps_treeview()
+        hide_dashboard()
 
 def on_enter(item):
 
@@ -214,30 +250,63 @@ def create_bind(item):
     mapsubcanvas.tag_bind(item, "<Enter>", lambda event: (on_enter(item)))
     mapsubcanvas.tag_bind(item, "<Leave>", lambda event: (on_leave(item)))
 
-#camps_listbox_subframe:
+#camps_treeview_subframe:
 
-camps_listbox_subframe = tk.Frame(canvas, width=500, height=300, bg="lightblue")
-camps_listbox_window = canvas.create_window(320,525, window = camps_listbox_subframe, width=500, height=300)
-camps_listbox = tk.Listbox(camps_listbox_subframe)
+camps_treeview_subframe = tk.Frame(canvas, width=500, height=300, bg="white")
+camps_treeview_window = canvas.create_window(320,525, window = camps_treeview_subframe, width=500, height=300)
 
-#camps_at_locations = {'tent_1': [], 'tent_2': [], 'tent_3': [], 'tent_4': [], 'tent_5': [], 'tent_6': [], 'tent_7': [], 'tent_8': []} # each list to be filled with camps (past, pres, fut) at that location.
+camps_listtitle = tk.Label(camps_treeview_subframe, text="Camps at this location:", font=("Comic Sans MS", 12), bg="white", fg="black")
+camps_listtitle.pack()
+camps_treeview = ttk.Treeview(camps_treeview_subframe, columns=("Camp Name", "Status"), show="headings")
 
-tent_1_camps = ['camp1', 'camp2', 'camp3']
+camps_treeview.heading("Camp Name", text="Camp Name")
+camps_treeview.heading("Status", text="Status")
 
-for camp in tent_1_camps:
-    camps_listbox.insert(tk.END, camp)
+camps_treeview.column("Camp Name", width=100, anchor='center')
+camps_treeview.column("Status", width=100, anchor='center')
 
-camps_listbox.pack(expand=True, fill="both")
-canvas.itemconfigure(camps_listbox_window, state="hidden")
+camps_treeview.pack(expand=True, fill="both")
+canvas.itemconfigure(camps_treeview_window, state="hidden")
 
-def show_camps_listbox():
+# Bind click on a row to a yes/no prompt
+def on_camp_row_click(event):
+    # Identify the row under the mouse
+    row_id = camps_treeview.identify_row(event.y)
+    if not row_id:
+        return
+    values = camps_treeview.item(row_id, "values")
+    camp_name = values[0] if values else ""
+    if camp_name:
+        if messagebox.askyesno("Open Camp", f"Open details for '{camp_name}'?"):
+            canvas.itemconfigure(create_camp_window, state="hidden")
+            show_edit_camp(lcl.camps[camp_name], values[1])
+
+camps_treeview.bind("<ButtonRelease-1>", on_camp_row_click)
+
+def show_camps_treeview():
     canvas.itemconfigure(msg_window, state="hidden")
-    canvas.itemconfigure(camps_listbox_window, state="normal")
+    canvas.itemconfigure(camps_treeview_window, state="normal")
 
+
+    camps_at_location = [camp for camp in lcl.camps.values() if camp.location == current_location] # each list filled with camps (past, pres, fut) at that location.
+
+    for camp in camps_at_location:
+
+        if camp.end_date + datetime.timedelta(days=1) > datetime.datetime.today() and camp.start_date < datetime.datetime.today():
+            camps_treeview.insert("", values=(camp.name, "ongoing"), index='end')
+        elif camp.start_date > datetime.datetime.today():
+            camps_treeview.insert("", values=(camp.name, "planned"), index='end')
+        elif camp.end_date + datetime.timedelta(days=1) < datetime.datetime.today() :
+            camps_treeview.insert("", values=(camp.name, "completed"), index='end')
 #create_camp_window:
 
+create_camp_button = tk.Button(canvas, text="Click here to create a new camp at this location", command=lambda: show_create_camp_window())
+create_camp_button.config(font=("Comic Sans MS", 12), bg="lightblue", fg="black", height=2, width=40)
+camp_button_window = canvas.create_window(320, 190, window=create_camp_button)
+canvas.itemconfigure(camp_button_window, state="hidden")
+
+
 makecampframe = tk.Frame(canvas, background="lightblue")
-makecampframe.pack(padx=0, pady=0, fill="both", expand=True)
 startframe = tk.Frame(makecampframe, bg="lightblue")
 startframe.pack(side="top", padx=5, pady=10, fill="both", expand=True)
 for i in range(3):
@@ -274,12 +343,23 @@ def button_select():
         tk.messagebox.showerror("Entry camp name error","Camp name already exists, please enter a different name")
         
     elif food_input == "":
-        tk.messagebox.showerror("Entry food stock error","Please enter a whole number for food stock per day")
+        tk.messagebox.showerror("Entry food supply error","Please enter a whole number for food supply per day")
        
     elif pay_input == "":
         tk.messagebox.showerror("Entry payment error","Please enter a number for daily payment rate")
         
     else:
+        
+        def date_clash(start, end, existing_camps):
+
+            clashes = []
+            for camp in existing_camps:
+
+                if start < camp.end_date + datetime.timedelta(days=1) and end + datetime.timedelta(days=1) > camp.start_date:
+
+                    clashes.append(True)
+
+            return clashes
 
         try:
             selected_sdate = datetime.datetime(int(selected_syear), months.index(selected_smonth) + 1, int(selected_sday))
@@ -291,11 +371,14 @@ def button_select():
             return
 
         if selected_sdate > selected_edate:
-            tk.messagebox.showerror("Date error","Error!, camp end must be after start")
+            tk.messagebox.showerror("Date error","Error! Camp end must be after start")
             
         elif selected_sdate < datetime.datetime.now() or selected_edate < datetime.datetime.now():
-            tk.messagebox.showerror("Date error","Error!, camp must be set in the future")
-            
+            tk.messagebox.showerror("Date error","Error! Camp must be set in the future")
+
+        elif any(date_clash(selected_sdate, selected_edate, [camp for camp in lcl.camps.values() if camp.location == current_location])):
+            tk.messagebox.showerror("Date clash error","Error! Camp dates clash with existing camp at this location")
+
         else:
             tk.messagebox.showinfo("Creation success", f"You have successfully created camp: {camp_name_input} on the selected dates: {selected_sdate.strftime('%Y-%m-%d')} to {selected_edate.strftime('%Y-%m-%d')} with food stock of {food_input} per day and daily payment rate of {pay_input} دج ") #location to be added, e.g. akfadou. Also to be formatted diff if day/overnight/expedition
             
@@ -319,10 +402,23 @@ def button_select():
                 start_date = selected_sdate,
                 end_date = selected_edate,
                 food_supply_per_day = int(food_input),
-                pay = float(pay_input)
+                pay = int(pay_input)
             )
 
             lcl.Camp.save_camps('camps.csv')
+            sdropdown_years.set("Select a start year")
+            sdropdown_months.set("Select a start month")
+            sdropdown_days.set("Select a start day")
+            edropdown_years.set("Select an end year")
+            edropdown_months.set("Select an end month")
+            edropdown_days.set("Select an end day")
+            camp_name_entry.delete(0, tk.END)
+            food_entry.delete(0, tk.END)
+            scout_payment.delete(0, tk.END)
+            
+            for item in camps_treeview.get_children():
+                camps_treeview.delete(item)
+            show_camps_treeview()
 
 #Need to add text in the window as a user help/info, i.e. what day, overnight and exped means. Also need to do something similar for every window in app, like colour key for dashboard.
 
@@ -336,14 +432,14 @@ create_camp_label.grid(column = 0, row = 0, pady=5)
 camp_name_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand = (root.register(lambda x: len(x) < 25), '%P'))
 camp_name_entry.grid(column = 1, row = 0, pady=5)
 
-create_food_label = tk.Label(Nameframe, text="Food stock available per day:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+create_food_label = tk.Label(Nameframe, text="Food supply per day:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
 create_food_label.grid(column = 0, row = 1, pady=5)
-food_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <99 ) or x == ""), '%P'))
+food_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <100) or x == ""), '%P'))
 food_entry.grid(column = 1, row = 1 , pady=5)
 
 payment_label = tk.Label(Nameframe, text="Daily payment rate for scout leader:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
 payment_label.grid(column = 0, row = 2, pady=5)
-scout_payment = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <999) or x == ""), '%P'))
+scout_payment = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <10000) or x == ""), '%P'))
 scout_payment.grid(column = 1, row = 2 , pady=5)
 
 sdropdown_years = ttk.Combobox(startframe, values=get_years(), state="readonly")
@@ -379,10 +475,254 @@ date_button.grid(row=3, column=1, pady=20)
 create_camp_window = canvas.create_window(960, 400, window=makecampframe, width=500, height=500)
 canvas.itemconfigure(create_camp_window, state="hidden")
 
+#Edit camp window:
 
-def show_create_camp_window():
+def block_interactions(widget):
+
+    for sequence in ("<Button>", "<ButtonRelease>", "<Motion>", "<MouseWheel>", "<Key>", "<FocusIn>", "<FocusOut>"):
+        widget.bind(sequence, lambda x: "break")
+
+    # Recurse into children
+    for child in widget.winfo_children():
+        block_interactions(child)
+
+def show_edit_camp(camp, state):
+
+    global edit_camp_window
+    global root
+    global editcampframe
+
+    try:
+        canvas.delete(edit_camp_window)
+    except:
+        pass
+
+    editcampframe = tk.Frame(canvas, background="lightblue")
+    starteditframe = tk.Frame(editcampframe, bg="lightblue")
+    starteditframe.pack(side="top", padx=5, pady=5, fill="both", expand=True)
+    for i in range(3):
+        starteditframe.grid_columnconfigure(i, weight=1)
+
+    endeditframe = tk.Frame(editcampframe, bg="lightblue")
+    endeditframe.pack(side="top", padx=5, pady=5, fill="both", expand=True)
+    for i in range(3):
+        endeditframe.grid_columnconfigure(i, weight=1)
+
+    Nameeditframe = tk.Frame(editcampframe, bg="lightblue")
+    Nameeditframe.pack(side="top", padx=5, pady=5, fill="both", expand=True)
+
+    edit_camp_label = tk.Label(Nameeditframe, text="Camp name:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    edit_camp_label.grid(column = 0, row = 0, pady=5)
+    camp_name_edit = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand = (root.register(lambda x: len(x) < 25), '%P'))
+    camp_name_edit.grid(column = 1, row = 0, pady=5)
+    camp_name_edit.insert(0, camp.name)
+
+    edit_food_label = tk.Label(Nameeditframe, text="Food supply per day:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    edit_food_label.grid(column = 0, row = 1, pady=5)
+    food_edit_entry = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <100) or x == ""), '%P'))
+    food_edit_entry.grid(column = 1, row = 1 , pady=5)
+    food_edit_entry.insert(0, camp.food_supply_per_day)
+
+    demand_label = tk.Label(Nameeditframe, text="Food demand per day:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    demand_label.grid(column = 0, row = 2, pady=5)
+    demand_value_label = tk.Label(Nameeditframe, text=f"{camp.food_demand_per_day}", bg="white", font=("Comic Sans MS", 8), fg='black', width = 25, height=1, anchor="w")
+    demand_value_label.grid(column = 1, row = 2, pady=5)
+
+    #The spinbox should be linked to actual food stock data
+
+    stock_label = tk.Label(Nameeditframe, text="Current food stock:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    stock_label.grid(column = 0, row = 3, pady=5)
+    stock_spinbox = tk.Spinbox(Nameeditframe, from_=0, to=10, increment=1, state="readonly", width=28)
+    stock_spinbox.grid(column = 1, row = 3, pady=5)
+
+    leader_label = tk.Label(Nameeditframe, text="Scout leader:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    leader_label.grid(column = 0, row = 4, pady=5)
+    leader_name_label = tk.Label(Nameeditframe, text=f"{camp.leader}", bg="white", font=("Comic Sans MS", 8), fg='black', width = 25, height=1)
+    leader_name_label.grid(column = 1, row = 4, pady=5)
+
+    edit_payment_label = tk.Label(Nameeditframe, text="Daily payment rate for scout leader:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    edit_payment_label.grid(column = 0, row = 5, pady=5)
+    scout_edit_payment = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <10000) or x == ""), '%P'))
+    scout_edit_payment.grid(column = 1, row = 5, pady=5)
+    scout_edit_payment.insert(0, camp.pay)
+
+    num_campers_label = tk.Label(Nameeditframe, text="Number of campers:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    num_campers_label.grid(column = 0, row = 6, pady=5)
+    num_campers_value_label = tk.Label(Nameeditframe, text=f"{len(camp.get_campers('campers.csv'))}", bg="white", font=("Comic Sans MS", 8), fg='black', width = 25, height=1, anchor="w")
+    num_campers_value_label.grid(column = 1, row = 6, pady=5)
+
+    #The progress bars are yet to be linked to real data
+
+    hiking_engagement_label = tk.Label(Nameeditframe, text="Hiking engagement:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    hiking_engagement_label.grid(column = 0, row = 7, pady=5)
+    hiking_engagement_bar = ttk.Progressbar(Nameeditframe, orient="horizontal", length=185, mode="determinate")
+    hiking_engagement_bar.step(50) #should be percentage of campers participating
+    hiking_engagement_bar.grid(column = 1, row = 7, pady=5)
+
+    archery_engagement_label = tk.Label(Nameeditframe, text="Archery engagement:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    archery_engagement_label.grid(column = 0, row = 8, pady=5)
+    archery_engagement_bar = ttk.Progressbar(Nameeditframe, orient="horizontal", length=185, mode="determinate")
+    archery_engagement_bar.step(50) #should be percentage of campers participating
+    archery_engagement_bar.grid(column = 1, row = 8, pady=5)
+
+    rockclimbing_engagement_label = tk.Label(Nameeditframe, text="Rock climbing engagement:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    rockclimbing_engagement_label.grid(column = 0, row = 9, pady=5)
+    rockclimbing_engagement_bar = ttk.Progressbar(Nameeditframe, orient="horizontal", length=185, mode="determinate")
+    rockclimbing_engagement_bar.step(50) #should be percentage of campers participating
+    rockclimbing_engagement_bar.grid(column = 1, row = 9, pady=5)
+
+    campfire_engagement_label = tk.Label(Nameeditframe, text="Campfire engagement:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
+    campfire_engagement_label.grid(column = 0, row = 10, pady=5)
+    campfire_engagement_bar = ttk.Progressbar(Nameeditframe, orient="horizontal", length=185, mode="determinate")
+    campfire_engagement_bar.step(50) #should be percentage of campers participating
+    campfire_engagement_bar.grid(column = 1, row = 10, pady=5)
+
+    seditdropdown_years = ttk.Combobox(starteditframe, values=get_years(), state="readonly")
+    seditdropdown_years.set(f"{camp.start_date.year}")
+    seditdropdown_years.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
+
+
+    seditdropdown_months = ttk.Combobox(starteditframe, values=months, state="readonly")
+    seditdropdown_months.set(f"{months[camp.start_date.month -1]}")
+    seditdropdown_months.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+
+
+    seditdropdown_days = ttk.Combobox(starteditframe, values=days, state="readonly")
+    seditdropdown_days.set(f"{camp.start_date.day}")
+    seditdropdown_days.grid(row=0, column=2, padx=10, pady=5, sticky="ew")
+
+    eeditdropdown_years = ttk.Combobox(endeditframe, values=get_years(), state="readonly")
+    eeditdropdown_years.set(f"{camp.end_date.year}")
+    eeditdropdown_years.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
+
+
+    eeditdropdown_months = ttk.Combobox(endeditframe, values=months, state="readonly")
+    eeditdropdown_months.set(f"{months[camp.end_date.month -1]}")
+    eeditdropdown_months.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+
+    eeditdropdown_days = ttk.Combobox(endeditframe, values=days, state="readonly")
+    eeditdropdown_days.set(f"{camp.end_date.day}")
+    eeditdropdown_days.grid(row=0, column=2, padx=10, pady=5, sticky="ew")
+
+    def edit_button_select():
+
+        selected_syear = seditdropdown_years.get()
+        selected_smonth = seditdropdown_months.get()
+        selected_sday = seditdropdown_days.get()
+        selected_eyear = eeditdropdown_years.get()
+        selected_emonth = eeditdropdown_months.get()
+        selected_eday = eeditdropdown_days.get()
+        camp_name_input = camp_name_edit.get().strip()
+        food_input = food_edit_entry.get()
+        pay_input = scout_edit_payment.get()
+        
+        if camp_name_input == "":
+            tk.messagebox.showerror("Entry camp name error","Please enter a name for the camp")
+
+        elif camp_name_input in lcl.camps and camp_name_input != camp.name:
+            tk.messagebox.showerror("Entry camp name error","Camp name already exists, please enter a different name")
+            
+        elif food_input == "":
+            tk.messagebox.showerror("Entry food supply error","Please enter a whole number for food supply per day")
+        
+        elif pay_input == "":
+            tk.messagebox.showerror("Entry payment error","Please enter a number for daily payment rate")
+            
+        else:
+            
+            def date_clash(start, end, existing_camps):
+
+                clashes = []
+                for c in existing_camps:
+
+                    if c.name != camp.name and start < c.end_date + datetime.timedelta(days=1) and end + datetime.timedelta(days=1) > c.start_date:
+
+                        clashes.append(True)
+
+                return clashes
+
+            try:
+                selected_sdate = datetime.datetime(int(selected_syear), months.index(selected_smonth) + 1, int(selected_sday))
+                selected_edate = datetime.datetime(int(selected_eyear), months.index(selected_emonth) + 1, int(selected_eday))
+
+            except:
+
+                tk.messagebox.showerror("Date error","One or more of the selected dates is non-existent")
+                return
+
+            if selected_sdate > selected_edate:
+                tk.messagebox.showerror("Date error","Error! Camp end must be after start")
+                
+            elif state != 'ongoing' and (selected_sdate < datetime.datetime.now() or selected_edate < datetime.datetime.now()):
+                tk.messagebox.showerror("Date error","Error! Camp must be set in the future")
+
+            elif any(date_clash(selected_sdate, selected_edate, [c for c in lcl.camps.values() if c.location == current_location])):
+                tk.messagebox.showerror("Date clash error","Error! Camp dates clash with existing camp at this location")
+
+            else:
+                tk.messagebox.showinfo("Edit success", f"You have successfully edited this camp: {camp_name_input} on the selected dates: {selected_sdate.strftime('%Y-%m-%d')} to {selected_edate.strftime('%Y-%m-%d')} with food stock of {food_input} per day and daily payment rate of {pay_input} دج ")
+                
+                if selected_sdate == selected_edate:
+
+                    camp_type = 'day'
+
+                elif (selected_edate - selected_sdate).days == 1:
+
+                    camp_type = 'overnight'
+
+                else:
+
+                    camp_type = 'expedition'
+                
+                camp.name = camp_name_input
+                camp.start_date = selected_sdate
+                camp.end_date = selected_edate
+                camp.food_supply_per_day = int(food_input)
+                camp.pay = int(pay_input)
+                camp.camp_type = camp_type
+
+                lcl.Camp.save_camps('camps.csv')
+
+    edit_camp_button = tk.Button(Nameeditframe, text="Save changes", command=edit_button_select)
+    edit_camp_button.grid(row=11, column=1, pady=5)
+
+    edit_camp_window = canvas.create_window(960, 400, window=editcampframe, width=500, height=500)
+    canvas.itemconfigure(edit_camp_window, state="normal")
+
+    if state == "completed":
+
+        block_interactions(editcampframe)
+        editcampframe.configure(cursor="X_cursor")
+
+    elif state == "ongoing":
+
+        block_interactions(starteditframe)
+        block_interactions(endeditframe)
+        block_interactions(food_edit_entry)
+        starteditframe.configure(cursor="X_cursor")
+        endeditframe.configure(cursor="X_cursor")
+        food_edit_entry.configure(cursor="X_cursor")
+
+
+def hide_dashboard():
 
     canvas.itemconfigure(create_camp_window, state="normal")
     canvas.itemconfigure(map_window, state="hidden")
+    canvas.itemconfigure(ntf_window, state="hidden")
+    canvas.itemconfigure(msg_window, state="hidden")
+    canvas.itemconfigure(camp_button_window, state = "normal")
 
+def show_create_camp_window():
+
+    try:
+        canvas.delete(edit_camp_window)
+
+    except:
+        pass
+
+    finally:
+        canvas.itemconfigure(create_camp_window, state="normal")
+
+
+#root.protocol("WM_DELETE_WINDOW", lambda: None)
 root.mainloop()
