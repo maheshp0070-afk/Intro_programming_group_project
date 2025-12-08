@@ -437,14 +437,19 @@ def show_others(): #maybe also add a key above the map for tent icons
             camps_treeview.insert("", "end", values=("No camps yet", "--"))
             return
 
-        # For each camp at the location, determine status (is_unassigned = Unassigned, get_camp_status otherwise) and insert into treeview
+        # For each camp at the location, determine status and insert into treeview
         now = datetime.datetime.now()
         for camp in camps_at_location:
             camp_status = get_camp_status(camp, now)
+
             if is_unassigned(camp):
-                status_label = "Completed" if camp_status == "completed" else "Unassigned"
+                if camp_status == "completed":
+                    status_label = "Completed"
+                else:
+                    status_label = "Unassigned"
             else:
-                status_label = camp_status
+                status_label = camp_status.title()
+
             camps_treeview.insert("", "end", values=(camp.name, status_label))
 
 
