@@ -126,6 +126,7 @@ photoimageplanned = tk.PhotoImage(file="amber.png")
 photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
 
 tent_icons = {}
+location_label = None
 
 location_coords = {
     "Sonelgaz Aokas": (310, 40),
@@ -318,15 +319,24 @@ def show_others(): #maybe also add a key above the map for tent icons
     mapsubcanvas.tent_highlighted = photoimagetent_highlighted
 
     """LOGIC for tent icon interactions on the map canvas & subsequent window/frames"""
-    # Click event function for tent icons
+    # Click event function for tent icons: Display location name Label and reveal the camp treeview and create camp window"
     def on_click(event, item):
         if messagebox.askyesno(f"{tent_icons.get(item)}",
                                f"{tent_icons.get(item)} located at ({event.x}, {event.y}). Go to location?"):
-            global current_location
+            global current_location, location_label
             current_location = tent_icons.get(item)  # maybe don't use get, just use tent_icons[item]
-            loc_title = tk.Label(canvas, text=f"{current_location}", font=("Comic Sans MS", 30), fg="white",
-                                 bg="#1095d6")
-            loc_title.place(x=640, y=20, anchor="n")
+
+            if location_label is not None:
+                location_label.destroy()
+
+            location_label = tk.Label(
+                canvas,
+                text=f"{current_location}",
+                font=("Comic Sans MS", 30),
+                fg="white",
+                bg="#1095d6"
+            )
+            location_label.place(x=640, y=20, anchor="n")
             show_camps_treeview()
             show_create_camp_window()
 
