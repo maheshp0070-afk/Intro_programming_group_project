@@ -5,8 +5,10 @@ import numpy as np
 import os
 from datetime import datetime
 
-USERS_CSV = 'data/messages.csv'
-DATA_DIR = 'messages'
+BASE_DIR = os.path.dirname(__file__)
+USERS_CSV = os.path.join(BASE_DIR, 'data', 'messages.csv')
+DATA_DIR = os.path.join(BASE_DIR, 'messages')
+os.makedirs(os.path.dirname(USERS_CSV), exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
 
 def load_users():
@@ -68,13 +70,15 @@ class MessagingApp:
     def __init__(self, root):
         self.root = root
         self.users = users_df
+
+        # Allow embedded frame to stretch evenly
         self.root.grid_columnconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)
-        # Frames
 
+        # Frames
         self.left = tk.Frame(root, bg="light grey")
-        self.left.grid(row=0, column = 0, padx=8, pady=8)
+        self.left.grid(row=0, column=0, padx=8, pady=8, sticky='nsew')
         self.left.grid_rowconfigure(0, weight=1)
         self.left.grid_columnconfigure(0, weight=1)
 
@@ -84,34 +88,32 @@ class MessagingApp:
         self.right.grid_columnconfigure(0, weight=1)
 
         # Sender
-        ttk.Label(self.left, text="Sender:").grid(row=0, column=0)
+        ttk.Label(self.left, text="Sender:").grid(row=0, column=0, sticky='w')
         self.sender_var = tk.StringVar()
-        self.sender_box = ttk.Combobox(self.left, textvariable=self.sender_var,values=list(self.users["id"]), width=13)
-        self.sender_box.grid(row=0, column=1)
+        self.sender_box = ttk.Combobox(self.left, textvariable=self.sender_var, values=list(self.users["id"]), width=13)
+        self.sender_box.grid(row=0, column=1, sticky='ew')
 
         # Receiver
-        ttk.Label(self.left, text="Receiver:").grid(row=1, column=0)
+        ttk.Label(self.left, text="Receiver:").grid(row=1, column=0, sticky='w')
         self.receiver_var = tk.StringVar()
-        self.receiver_box = ttk.Combobox(self.left, textvariable=self.receiver_var,values=list(self.users["id"]), width=13)
-        self.receiver_box.grid(row=1, column=1)
+        self.receiver_box = ttk.Combobox(self.left, textvariable=self.receiver_var, values=list(self.users["id"]), width=13)
+        self.receiver_box.grid(row=1, column=1, sticky='ew')
 
         # Message
-        ttk.Label(self.left, text="Message:").grid(row=2, column=0)
+        ttk.Label(self.left, text="Message:").grid(row=2, column=0, sticky='nw')
         self.msg_field = tk.Text(self.left, width=20, height=10)
-        self.msg_field.grid(row=2, column=1)
-
-        #Delete Button
-        ttk.Button(self.right, text="Delete Conversation", command=self.delete_conv).grid(row=3, column=0, pady=0)
+        self.msg_field.grid(row=2, column=1, pady=5, sticky='ew')
 
         # Send button
-        ttk.Button(self.left, text="Send", command=self.send_msg).grid(row=3, column=1, pady=5)
+        ttk.Button(self.left, text="Send", command=self.send_msg).grid(row=3, column=1, pady=5, sticky='e')
 
-        # Conversation panel
-        ttk.Label(self.right, text="Conversation:").grid(row=0, column=0)
+        # Conversation panel & controls
+        ttk.Label(self.right, text="Conversation:").grid(row=0, column=0, sticky='w')
         self.conv_panel = tk.Text(self.right, width=40, height=15)
-        self.conv_panel.grid(row=1, column=0)
+        self.conv_panel.grid(row=1, column=0, pady=5)
 
         ttk.Button(self.right, text="Load Conversation", command=self.load_conv).grid(row=2, column=0, pady=5)
+        ttk.Button(self.right, text="Delete Conversation", command=self.delete_conv).grid(row=3, column=0, pady=0)
 
     def delete_conv(self):
         u1 = self.sender_var.get()
