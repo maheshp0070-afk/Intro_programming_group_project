@@ -1075,7 +1075,7 @@ def show_others(): #maybe also add a key above the map for tent icons
                                       activebackground="darkred", activeforeground="white",
                                       relief="raised", bd=2)
             remove_act_btn.grid(row=0, column=1, padx=5, pady=5, sticky="ew", ipady=5)
-        
+
         def open_extra_notes_window(activity_name):
                 activity_window = tk.Toplevel()
                 activity_window.title(f"Extra notes for {activity_name}")
@@ -1180,7 +1180,7 @@ def show_others(): #maybe also add a key above the map for tent icons
         remove_campers_label = tk.Label(makecampframe, text="Remove Campers", bg="white", fg="black", font=("Comic Sans MS", 18))
         remove_campers_label.grid(row=8, column=0, sticky="ew", padx=10, pady=(5, 10))
 
-        remove_campers_button = tk.Button(makecampframe, text="Remove from Camp",
+        remove_campers_button = tk.Button(makecampframe, text="View and Remove Campers",
                                           command=open_remove_campers_window, bg="white",
                                           font=("Comic Sans MS", 18))
         remove_campers_button.grid(row=8, column=1, columnspan=2, sticky="ew", padx=10, pady=(5, 10))
@@ -1263,7 +1263,7 @@ def show_others(): #maybe also add a key above the map for tent icons
     ttk.Button(ntfsubframe, text="Back to Dashboard",
            style="Board.TButton",
            command=show_main_dashboard).grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
-    
+           
     """statistics window function"""
     def open_statistics_window():
         stats_window = tk.Toplevel()
@@ -1331,7 +1331,7 @@ def show_others(): #maybe also add a key above the map for tent icons
             
             camp_info = [
                 f"Duration: {camp['duration']}",
-                f"Participation: {camp['participation']['assigned_campers']}/{camp['participation']['total_campers']} ({camp['participation']['participation_rate']}%)",
+                f"Campers at Camp: {camp['campers_at_camp']}",
                 f"Activities: {camp['activities']['total_filled']}/{camp['activities']['total_capacity']} slots ({camp['activities']['utilisation_rate']}%)",
                 f"Daily Food: Supply {camp['food']['daily_supply']} | Demand {camp['food']['daily_demand']} | Surplus {camp['food']['daily_surplus']:+d}",
                 f"Pay: ${camp['pay']}"

@@ -83,11 +83,10 @@ class ScoutLeader(User):
         if camp_name not in df.index:
             raise ValueError(f"Camp {camp_name} does not exist")
 
-        current = df.loc[camp_name, "scout_leader"]
-        current_text = "" if pd.isna(current) else str(current).strip()
-        current_lower = current_text.lower()
+        current_text = df.loc[camp_name, "scout_leader"]
+        # treat NaN, empty string, or literal "Na" as unassigned
 
-        if current_lower in ("", "na", "unassigned"):
+        if pd.isna(current_text) or str(current_text).strip() in ("", "Na", "unassigned"):
             df.loc[camp_name, "scout_leader"] = self.username
             df.to_csv("data/camps.csv", index=True)
             return {
@@ -96,8 +95,7 @@ class ScoutLeader(User):
                 "camp_name": camp_name,
                 "scout_leader": self.username
             }
-
-        if current_text == self.username:
+        elif current_text == self.username:
             return {
                 "success": False,
                 "message": f"{self.username} is already assigned to this camp!",
@@ -216,7 +214,7 @@ class ScoutLeader(User):
             raise PermissionError(f"You do not supervise camp {camp_name}")
 
         current_assigned = df_activities.loc[activity_id, "assigned_campers"]
-        current_camper_list = [int(c.strip()) for c in str(current_assigned).split(",")] if pd.notna(
+        current_camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",")] if pd.notna(
             current_assigned) and str(current_assigned).strip() else []
 
         # Check for duplicates
@@ -269,7 +267,7 @@ class ScoutLeader(User):
             if pd.isna(current_activities) or str(current_activities).strip() == "":
                 df_campers.loc[camper_id, "activities"] = str(activity_id)
             else:
-                df_campers.loc[camper_id, "activities"] = f"{current_activities},{activity_id}"
+                df_campers.loc[camper_id, "activities"] = str(int(float(current_activities))) + f",{activity_id}"
 
         df_campers.to_csv("data/campers.csv", index=True)
         
@@ -305,7 +303,7 @@ class ScoutLeader(User):
                 "not_assigned": camper_ids
             }
 
-        camper_list = [int(c.strip()) for c in str(current_assigned).split(",")]
+        camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",")]
         removed_campers = []
         not_assigned_campers = []
 
@@ -318,16 +316,12 @@ class ScoutLeader(User):
             removed_campers.append(camper_id)
 
             if camper_id in df_campers.index:
-                camper_activities = df_campers.loc[camper_id, "activities"]
-                if pd.isna(camper_activities) or str(camper_activities).strip() == "":
+                current_activities = df_campers.loc[camper_id, "activities"]
+                if pd.isna(current_activities) or str(current_activities).strip() == "":
                     continue
-                activity_list = [int(a.strip()) for a in str(camper_activities).split(",")]
-                if activity_id in activity_list:
-                    activity_list.remove(activity_id)
-                    if activity_list:
-                        df_campers.loc[camper_id, "activities"] = ",".join(map(str, activity_list))
-                    else:
-                        df_campers.loc[camper_id, "activities"] = ""
+                activity_list = [int(float(c.strip())) for c in str(current_activities).split(",")]
+                new_activities = ",".join([str(a) for a in activity_list if a != activity_id])
+                df_campers.loc[camper_id, "activities"] = new_activities if new_activities else ""
 
         if camper_list:
             df_activities.loc[activity_id, "assigned_campers"] = ",".join(map(str, camper_list))
@@ -545,8 +539,7 @@ class ScoutLeader(User):
 
             """Participation stats"""
             total_campers = len(camp_campers)
-            assigned_campers = len(camp_campers[camp_campers["camps"] != "Na"])
-            participation_rate = (assigned_campers / total_campers * 100) if total_campers > 0 else 0
+            
 
             """Activity stats"""
             total_activities = len(camp_activities)
@@ -587,11 +580,7 @@ class ScoutLeader(User):
                 "location": camp_data["location"],
                 "camp_type": camp_data["type"],
                 "duration": f"{camp_data['start_date']} to {camp_data['end_date']}",
-                "participation": {
-                    "total_campers": int(total_campers),
-                    "assigned_campers": int(assigned_campers),
-                    "participation_rate": round(participation_rate, 1)
-                },
+                "campers_at_camp": int(total_campers),
                 "activities": {
                     "total_activities": int(total_activities),
                     "total_capacity": int(total_activity_capacity),
@@ -633,7 +622,29 @@ class ScoutLeader(User):
             "overall": overall_stats
         }
 
+    def get_campers_for_activity(self, chosen_camp):
+        """Gets the activities for a camp and their campers"""
+        df_activities = pd.read_csv("data/activities.csv")
+        df_chosen_camp = df_activities[df_activities["camp_name"] == chosen_camp]
+        df_activity_campers = df_chosen_camp[["activity_name", "assigned_campers"]]
+        return df_activity_campers
 
+    def get_notes_for_activity(self, chosen_camp):
+        """Gets the notes for a given activity"""
+        df_activities = pd.read_csv("data/activities.csv")
+        df_chosen_camp = df_activities[df_activities["camp_name"] == chosen_camp]
+        df_activity_notes = df_chosen_camp[["activity_name", "extra_notes"]]
+        return df_activity_notes.to_string()
 
-leaders = ScoutLeader.load_leaders("data/users.csv")
+    def get_camper_id_to_names(self, chosen_campers):
+        """Gets the names of each camper associated with their id for given camper_ids"""
+        df_campers = pd.read_csv("data/campers.csv")
+        df_campers["camper_id"] = df_campers["camper_id"].astype(str).str.strip()
+        chosen_campers_str = [str(c).strip() for c in chosen_campers]
+        #print(df_campers.dtypes)
+        #print(df_campers["camper_id"].tolist())
+        df_campers["full_name"] = df_campers["first_name"] + " " + df_campers["last_name"]
+        df_filtered = df_campers[df_campers["camper_id"].isin(chosen_campers_str)]
+        return df_filtered[["camper_id", "full_name"]]
+
 
