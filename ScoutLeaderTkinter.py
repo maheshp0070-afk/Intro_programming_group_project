@@ -501,19 +501,275 @@ def show_others(): #maybe also add a key above the map for tent icons
         def placeholder_function():
             print("Hello World!")
 
+        def open_add_campers_window():
+            """Window to bulk add unassigned campers to the camp"""
+            add_window = tk.Toplevel()
+            add_window.title(f"Add Campers to {camp_obj.name}")
+            add_window.geometry("500x600")
+            add_window.configure(bg="lightblue")
+            
+            add_window.grid_columnconfigure(0, weight=1)
+            add_window.grid_rowconfigure(2, weight=1)
+            
+            # Title
+            title_label = tk.Label(add_window, text=f"Add Campers to {camp_obj.name}",
+                                  bg="dodgerblue", fg="white", font=("Comic Sans MS", 14, "bold"))
+            title_label.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
+            
+            # Get all campers from CSV
+            df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
+            
+            # Filter to only unassigned campers (camps = "Na" or empty)
+            unassigned_campers = []
+            for camper_id, row in df_campers.iterrows():
+                camp_val = row.get("camps", "")
+                if pd.isna(camp_val) or str(camp_val).strip() in ("", "Na"):
+                    unassigned_campers.append({
+                        "id": str(camper_id),
+                        "name": f"{row['first_name']} {row['last_name']}",
+                        "age": row['age']
+                    })
+            
+            # Dictionary to track checkbox states
+            selected_campers = {}
+            
+            if not unassigned_campers:
+                no_campers = tk.Label(add_window, text="No unassigned campers available",
+                                     bg="white", fg="black", font=("Comic Sans MS", 12))
+                no_campers.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+            else:
+                # Scrollable treeview with checkboxes
+                tree_frame = tk.Frame(add_window, bg="white")
+                tree_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
+                
+                scrollbar = ttk.Scrollbar(tree_frame)
+                scrollbar.pack(side="right", fill="y")
+                
+                campers_tree = ttk.Treeview(tree_frame, columns=("ID", "Name", "Age"), 
+                                           show="tree headings", yscrollcommand=scrollbar.set)
+                scrollbar.config(command=campers_tree.yview)
+                
+                campers_tree.heading("#0", text="✓")
+                campers_tree.heading("ID", text="ID")
+                campers_tree.heading("Name", text="Name")
+                campers_tree.heading("Age", text="Age")
+                
+                campers_tree.column("#0", width=30)
+                campers_tree.column("ID", width=40)
+                campers_tree.column("Name", width=200)
+                campers_tree.column("Age", width=50)
+                
+                # Insert campers as rows
+                for camper in unassigned_campers:
+                    camper_id = camper["id"]
+                    selected_campers[camper_id] = False
+                    campers_tree.insert("", "end", text="☐", values=(camper_id, camper["name"], camper["age"]))
+                
+                # Click to toggle checkbox
+                def on_tree_click(event):
+                    item = campers_tree.identify_row(event.y)
+                    if not item:
+                        return
+                    col = campers_tree.identify_column(event.x)
+                    if col == "#0":  # Checkbox column
+                        values = campers_tree.item(item, "values")
+                        camper_id = values[0]
+                        # Toggle selection
+                        selected_campers[camper_id] = not selected_campers[camper_id]
+                        checkbox_text = "☑" if selected_campers[camper_id] else "☐"
+                        campers_tree.item(item, text=checkbox_text)
+                
+                campers_tree.bind("<Button-1>", on_tree_click)
+                campers_tree.pack(fill="both", expand=True)
+            
+            # Button frame
+            button_frame = tk.Frame(add_window, bg="lightblue")
+            button_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
+            button_frame.grid_columnconfigure(0, weight=1)
+            button_frame.grid_columnconfigure(1, weight=1)
+            
+            # Select All / Deselect All buttons
+            def select_all():
+                for camper_id in selected_campers:
+                    selected_campers[camper_id] = True
+                for item in campers_tree.get_children():
+                    campers_tree.item(item, text="☑")
+            
+            def deselect_all():
+                for camper_id in selected_campers:
+                    selected_campers[camper_id] = False
+                for item in campers_tree.get_children():
+                    campers_tree.item(item, text="☐")
+            
+            ttk.Button(button_frame, text="Select All", command=select_all).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+            ttk.Button(button_frame, text="Deselect All", command=deselect_all).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+            
+            # Confirm button
+            def confirm_add():
+                selected_ids = [int(cid) for cid, selected in selected_campers.items() if selected]
+                if not selected_ids:
+                    messagebox.showwarning("No selection", "Please select at least one camper to add.")
+                    return
+                
+                try:
+                    for camper_id in selected_ids:
+                        result = selected_leader.assign_camper(camper_id, camp_obj.name)
+                        if not result.get("success"):
+                            messagebox.showerror("Assignment failed", result.get("message", "Unknown error"))
+                            return
+                    
+                    messagebox.showinfo("Success", f"Added {len(selected_ids)} camper(s) to {camp_obj.name}")
+                    add_window.destroy()
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to add campers: {str(e)}")
+            
+            confirm_btn = tk.Button(button_frame, text="Add Selected Campers", command=confirm_add, 
+                                   bg="green", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                   activebackground="darkgreen", activeforeground="white",
+                                   relief="raised", bd=2)
+            confirm_btn.grid(row=1, column=0, columnspan=2, padx=5, pady=10, sticky="ew", ipady=8)
+
+        def open_remove_campers_window():
+            """Window to bulk remove campers from the camp"""
+            remove_window = tk.Toplevel()
+            remove_window.title(f"Remove Campers from {camp_obj.name}")
+            remove_window.geometry("500x600")
+            remove_window.configure(bg="lightblue")
+            
+            remove_window.grid_columnconfigure(0, weight=1)
+            remove_window.grid_rowconfigure(2, weight=1)
+            
+            # Title
+            title_label = tk.Label(remove_window, text=f"Remove Campers from {camp_obj.name}",
+                                  bg="dodgerblue", fg="white", font=("Comic Sans MS", 14, "bold"))
+            title_label.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
+            
+            # Get campers currently in this camp
+            df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
+            
+            camp_campers = []
+            for camper_id, row in df_campers.iterrows():
+                if row.get("camps") == camp_obj.name:
+                    camp_campers.append({
+                        "id": str(camper_id),
+                        "name": f"{row['first_name']} {row['last_name']}",
+                        "age": row['age']
+                    })
+            
+            # Dictionary to track checkbox states
+            selected_campers = {}
+            
+            if not camp_campers:
+                no_campers = tk.Label(remove_window, text="No campers assigned to this camp",
+                                     bg="white", fg="black", font=("Comic Sans MS", 12))
+                no_campers.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+            else:
+                # Scrollable treeview with checkboxes
+                tree_frame = tk.Frame(remove_window, bg="white")
+                tree_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
+                
+                scrollbar = ttk.Scrollbar(tree_frame)
+                scrollbar.pack(side="right", fill="y")
+                
+                campers_tree = ttk.Treeview(tree_frame, columns=("ID", "Name", "Age"), 
+                                           show="tree headings", yscrollcommand=scrollbar.set)
+                scrollbar.config(command=campers_tree.yview)
+                
+                campers_tree.heading("#0", text="✓")
+                campers_tree.heading("ID", text="ID")
+                campers_tree.heading("Name", text="Name")
+                campers_tree.heading("Age", text="Age")
+                
+                campers_tree.column("#0", width=30)
+                campers_tree.column("ID", width=40)
+                campers_tree.column("Name", width=200)
+                campers_tree.column("Age", width=50)
+                
+                # Insert campers as rows
+                for camper in camp_campers:
+                    camper_id = camper["id"]
+                    selected_campers[camper_id] = False
+                    campers_tree.insert("", "end", text="☐", values=(camper_id, camper["name"], camper["age"]))
+                
+                # Click to toggle checkbox
+                def on_tree_click(event):
+                    item = campers_tree.identify_row(event.y)
+                    if not item:
+                        return
+                    col = campers_tree.identify_column(event.x)
+                    if col == "#0":  # Checkbox column
+                        values = campers_tree.item(item, "values")
+                        camper_id = values[0]
+                        # Toggle selection
+                        selected_campers[camper_id] = not selected_campers[camper_id]
+                        checkbox_text = "☑" if selected_campers[camper_id] else "☐"
+                        campers_tree.item(item, text=checkbox_text)
+                
+                campers_tree.bind("<Button-1>", on_tree_click)
+                campers_tree.pack(fill="both", expand=True)
+            
+            # Button frame
+            button_frame = tk.Frame(remove_window, bg="lightblue")
+            button_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
+            button_frame.grid_columnconfigure(0, weight=1)
+            button_frame.grid_columnconfigure(1, weight=1)
+            
+            # Select All / Deselect All buttons
+            def select_all():
+                for camper_id in selected_campers:
+                    selected_campers[camper_id] = True
+                for item in campers_tree.get_children():
+                    campers_tree.item(item, text="☑")
+            
+            def deselect_all():
+                for camper_id in selected_campers:
+                    selected_campers[camper_id] = False
+                for item in campers_tree.get_children():
+                    campers_tree.item(item, text="☐")
+            
+            ttk.Button(button_frame, text="Select All", command=select_all).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+            ttk.Button(button_frame, text="Deselect All", command=deselect_all).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+            
+            # Confirm button
+            def confirm_remove():
+                selected_ids = [int(cid) for cid, selected in selected_campers.items() if selected]
+                if not selected_ids:
+                    messagebox.showwarning("No selection", "Please select at least one camper to remove.")
+                    return
+                
+                try:
+                    for camper_id in selected_ids:
+                        result = selected_leader.remove_camper(camper_id)
+                        if not result.get("success"):
+                            messagebox.showerror("Removal failed", result.get("message", "Unknown error"))
+                            return
+                    
+                    messagebox.showinfo("Success", f"Removed {len(selected_ids)} camper(s) from {camp_obj.name}")
+                    remove_window.destroy()
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to remove campers: {str(e)}")
+            
+            confirm_btn = tk.Button(button_frame, text="Remove Selected Campers", command=confirm_remove, 
+                                   bg="red", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                   activebackground="darkred", activeforeground="white",
+                                   relief="raised", bd=2)
+            confirm_btn.grid(row=1, column=0, columnspan=2, padx=5, pady=10, sticky="ew", ipady=8)
+
         # New window to show campers for each activity
+                # New window to show campers for each activity
         def open_activity_window(activity_name):
             activity_window = tk.Toplevel()
             activity_window.title(f"Campers for {activity_name}")
-            activity_window.geometry("400x400")
+            activity_window.geometry("500x500")
 
             activity_window.configure(bg="lightblue")
 
             activity_window.grid_columnconfigure(0, weight=1)
+            activity_window.grid_columnconfigure(1, weight=1)
             activity_window.grid_rowconfigure(1, weight=1)
 
             activity_window_title = tk.Label(activity_window, text=f"Campers assigned to {activity_name}",
-                                             bg="dodgerblue", font=("Comic Sans MS", 22))
+                                             bg="dodgerblue", font=("Comic Sans MS", 20), fg="white")
             activity_window_title.grid(row=0, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 5))
 
             df = leaders[placeholder].get_campers_for_activity(camp_obj.name)
@@ -530,27 +786,295 @@ def show_others(): #maybe also add a key above the map for tent icons
             if not assigned_campers_list:
                 no_campers_label = tk.Label(activity_window, text="No campers assigned",
                                             bg="white", fg="black", font=("Comic Sans MS", 16))
-                no_campers_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=(5, 10))
+                no_campers_label.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=(5, 10))
             else:
-
-                df = leaders[placeholder].get_camper_id_to_names(assigned_campers_list)
+                df_names = leaders[placeholder].get_camper_id_to_names(assigned_campers_list)
 
                 tree_frame = tk.Frame(activity_window)
-                tree_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+                tree_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=5)
 
-                campers_tree = ttk.Treeview(tree_frame, columns=list(df.columns), show="headings")
+                campers_tree = ttk.Treeview(tree_frame, columns=list(df_names.columns), show="headings")
                 campers_tree.pack(fill="both", expand=True)
 
-                for col in df.columns:
+                for col in df_names.columns:
                     campers_tree.heading(col, text=col)
                     campers_tree.column(col, anchor='center')
 
-                for _, row in df.iterrows():
+                for _, row in df_names.iterrows():
                     campers_tree.insert("", "end", values=list(row))
 
-            add_campers = tk.Button(activity_window, text="Add Camper", command=placeholder_function, bg="white",
-                                    font=("Comic Sans MS", 18))
-            add_campers.grid(row=2, column=0, sticky="ew", padx=10, pady=(5, 10))
+            # Get activity_id from activity_name
+            df_activities = pd.read_csv("data/activities.csv")
+            activity_row = df_activities[df_activities["activity_name"] == activity_name]
+            if activity_row.empty or camp_obj.name not in activity_row["camp_name"].values:
+                messagebox.showerror("Error", f"Activity {activity_name} not found in camp {camp_obj.name}")
+                return
+            activity_id = activity_row.iloc[0]["activity_id"]
+
+            # Add campers to activity window
+            def open_add_activity_window():
+                add_act_window = tk.Toplevel()
+                add_act_window.title(f"Add Campers to {activity_name}")
+                add_act_window.geometry("500x600")
+                add_act_window.configure(bg="lightblue")
+                
+                add_act_window.grid_columnconfigure(0, weight=1)
+                add_act_window.grid_rowconfigure(2, weight=1)
+                
+                # Title
+                title_label = tk.Label(add_act_window, text=f"Add Campers to {activity_name}",
+                                      bg="dodgerblue", fg="white", font=("Comic Sans MS", 14, "bold"))
+                title_label.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
+                
+                # Get campers assigned to this camp (only those in camp_obj.name)
+                df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
+                
+                # Get already assigned campers to this activity
+                already_assigned = set([int(c.strip()) for c in str(assigned_campers).split(",")]) if assigned_campers_list else set()
+                
+                # Filter to campers in this camp but NOT already in this activity
+                available_campers = []
+                for camper_id, row in df_campers.iterrows():
+                    if row.get("camps") == camp_obj.name and camper_id not in already_assigned:
+                        available_campers.append({
+                            "id": str(camper_id),
+                            "name": f"{row['first_name']} {row['last_name']}",
+                            "age": row['age']
+                        })
+                
+                selected_campers = {}
+                
+                if not available_campers:
+                    no_campers = tk.Label(add_act_window, text="No available campers in this camp",
+                                         bg="white", fg="black", font=("Comic Sans MS", 12))
+                    no_campers.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+                else:
+                    tree_frame = tk.Frame(add_act_window, bg="white")
+                    tree_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
+                    
+                    scrollbar = ttk.Scrollbar(tree_frame)
+                    scrollbar.pack(side="right", fill="y")
+                    
+                    campers_tree = ttk.Treeview(tree_frame, columns=("ID", "Name", "Age"), 
+                                               show="tree headings", yscrollcommand=scrollbar.set)
+                    scrollbar.config(command=campers_tree.yview)
+                    
+                    campers_tree.heading("#0", text="✓")
+                    campers_tree.heading("ID", text="ID")
+                    campers_tree.heading("Name", text="Name")
+                    campers_tree.heading("Age", text="Age")
+                    
+                    campers_tree.column("#0", width=30)
+                    campers_tree.column("ID", width=40)
+                    campers_tree.column("Name", width=200)
+                    campers_tree.column("Age", width=50)
+                    
+                    for camper in available_campers:
+                        camper_id = camper["id"]
+                        selected_campers[camper_id] = False
+                        campers_tree.insert("", "end", text="☐", values=(camper_id, camper["name"], camper["age"]))
+                    
+                    def on_tree_click(event):
+                        item = campers_tree.identify_row(event.y)
+                        if not item:
+                            return
+                        col = campers_tree.identify_column(event.x)
+                        if col == "#0":
+                            values = campers_tree.item(item, "values")
+                            camper_id = values[0]
+                            selected_campers[camper_id] = not selected_campers[camper_id]
+                            checkbox_text = "☑" if selected_campers[camper_id] else "☐"
+                            campers_tree.item(item, text=checkbox_text)
+                    
+                    campers_tree.bind("<Button-1>", on_tree_click)
+                    campers_tree.pack(fill="both", expand=True)
+                
+                # Button frame
+                button_frame = tk.Frame(add_act_window, bg="lightblue")
+                button_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
+                button_frame.grid_columnconfigure(0, weight=1)
+                button_frame.grid_columnconfigure(1, weight=1)
+                
+                def select_all():
+                    for camper_id in selected_campers:
+                        selected_campers[camper_id] = True
+                    for item in campers_tree.get_children():
+                        campers_tree.item(item, text="☑")
+                
+                def deselect_all():
+                    for camper_id in selected_campers:
+                        selected_campers[camper_id] = False
+                    for item in campers_tree.get_children():
+                        campers_tree.item(item, text="☐")
+                
+                ttk.Button(button_frame, text="Select All", command=select_all).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+                ttk.Button(button_frame, text="Deselect All", command=deselect_all).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+                
+                def confirm_add_activity():
+                    selected_ids = [int(cid) for cid, selected in selected_campers.items() if selected]
+                    if not selected_ids:
+                        messagebox.showwarning("No selection", "Please select at least one camper to add.")
+                        return
+                    
+                    try:
+                        result = selected_leader.assign_campers_to_activity(activity_id, selected_ids)
+                        if not result.get("success"):
+                            messagebox.showerror("Assignment failed", result.get("message", "Unknown error"))
+                            return
+                        
+                        messagebox.showinfo("Success", f"Added {len(selected_ids)} camper(s) to {activity_name}")
+                        add_act_window.destroy()
+                        activity_window.destroy()
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to add campers: {str(e)}")
+                
+                confirm_btn = tk.Button(button_frame, text="Add Selected Campers", command=confirm_add_activity, 
+                                       bg="green", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                       activebackground="darkgreen", activeforeground="white",
+                                       relief="raised", bd=2)
+                confirm_btn.grid(row=1, column=0, columnspan=2, padx=5, pady=10, sticky="ew", ipady=8)
+
+            # Remove campers from activity window
+            def open_remove_activity_window():
+                remove_act_window = tk.Toplevel()
+                remove_act_window.title(f"Remove Campers from {activity_name}")
+                remove_act_window.geometry("500x600")
+                remove_act_window.configure(bg="lightblue")
+                
+                remove_act_window.grid_columnconfigure(0, weight=1)
+                remove_act_window.grid_rowconfigure(2, weight=1)
+                
+                # Title
+                title_label = tk.Label(remove_act_window, text=f"Remove Campers from {activity_name}",
+                                      bg="dodgerblue", fg="white", font=("Comic Sans MS", 14, "bold"))
+                title_label.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
+                
+                selected_campers = {}
+                
+                if not assigned_campers_list:
+                    no_campers = tk.Label(remove_act_window, text="No campers assigned to this activity",
+                                         bg="white", fg="black", font=("Comic Sans MS", 12))
+                    no_campers.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+                else:
+                    df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
+                    
+                    # Build list of assigned campers with their details
+                    assigned_details = []
+                    for camper_id in assigned_campers_list:
+                        try:
+                            camper_int = int(camper_id)
+                            if camper_int in df_campers.index:
+                                row = df_campers.loc[camper_int]
+                                assigned_details.append({
+                                    "id": str(camper_int),
+                                    "name": f"{row['first_name']} {row['last_name']}",
+                                    "age": row['age']
+                                })
+                        except (ValueError, KeyError):
+                            continue
+                    
+                    tree_frame = tk.Frame(remove_act_window, bg="white")
+                    tree_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
+                    
+                    scrollbar = ttk.Scrollbar(tree_frame)
+                    scrollbar.pack(side="right", fill="y")
+                    
+                    campers_tree = ttk.Treeview(tree_frame, columns=("ID", "Name", "Age"), 
+                                               show="tree headings", yscrollcommand=scrollbar.set)
+                    scrollbar.config(command=campers_tree.yview)
+                    
+                    campers_tree.heading("#0", text="✓")
+                    campers_tree.heading("ID", text="ID")
+                    campers_tree.heading("Name", text="Name")
+                    campers_tree.heading("Age", text="Age")
+                    
+                    campers_tree.column("#0", width=30)
+                    campers_tree.column("ID", width=40)
+                    campers_tree.column("Name", width=200)
+                    campers_tree.column("Age", width=50)
+                    
+                    for camper in assigned_details:
+                        camper_id = camper["id"]
+                        selected_campers[camper_id] = False
+                        campers_tree.insert("", "end", text="☐", values=(camper_id, camper["name"], camper["age"]))
+                    
+                    def on_tree_click(event):
+                        item = campers_tree.identify_row(event.y)
+                        if not item:
+                            return
+                        col = campers_tree.identify_column(event.x)
+                        if col == "#0":
+                            values = campers_tree.item(item, "values")
+                            camper_id = values[0]
+                            selected_campers[camper_id] = not selected_campers[camper_id]
+                            checkbox_text = "☑" if selected_campers[camper_id] else "☐"
+                            campers_tree.item(item, text=checkbox_text)
+                    
+                    campers_tree.bind("<Button-1>", on_tree_click)
+                    campers_tree.pack(fill="both", expand=True)
+                
+                # Button frame
+                button_frame = tk.Frame(remove_act_window, bg="lightblue")
+                button_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
+                button_frame.grid_columnconfigure(0, weight=1)
+                button_frame.grid_columnconfigure(1, weight=1)
+                
+                def select_all():
+                    for camper_id in selected_campers:
+                        selected_campers[camper_id] = True
+                    for item in campers_tree.get_children():
+                        campers_tree.item(item, text="☑")
+                
+                def deselect_all():
+                    for camper_id in selected_campers:
+                        selected_campers[camper_id] = False
+                    for item in campers_tree.get_children():
+                        campers_tree.item(item, text="☐")
+                
+                ttk.Button(button_frame, text="Select All", command=select_all).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+                ttk.Button(button_frame, text="Deselect All", command=deselect_all).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+                
+                def confirm_remove_activity():
+                    selected_ids = [int(cid) for cid, selected in selected_campers.items() if selected]
+                    if not selected_ids:
+                        messagebox.showwarning("No selection", "Please select at least one camper to remove.")
+                        return
+                    
+                    try:
+                        result = selected_leader.remove_campers_from_activity(activity_id, selected_ids)
+                        if not result.get("success"):
+                            messagebox.showerror("Removal failed", result.get("message", "Unknown error"))
+                            return
+                        
+                        messagebox.showinfo("Success", f"Removed {len(selected_ids)} camper(s) from {activity_name}")
+                        remove_act_window.destroy()
+                        activity_window.destroy()
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to remove campers: {str(e)}")
+                
+                confirm_btn = tk.Button(button_frame, text="Remove Selected Campers", command=confirm_remove_activity, 
+                                       bg="red", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                       activebackground="darkred", activeforeground="white",
+                                       relief="raised", bd=2)
+                confirm_btn.grid(row=1, column=0, columnspan=2, padx=5, pady=10, sticky="ew", ipady=8)
+
+            # Button frame for add/remove
+            button_frame = tk.Frame(activity_window, bg="lightblue")
+            button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=(5, 10))
+            button_frame.grid_columnconfigure(0, weight=1)
+            button_frame.grid_columnconfigure(1, weight=1)
+            
+            add_act_btn = tk.Button(button_frame, text="Add Campers", command=open_add_activity_window, 
+                                   bg="green", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                   activebackground="darkgreen", activeforeground="white",
+                                   relief="raised", bd=2)
+            add_act_btn.grid(row=0, column=0, padx=5, pady=5, sticky="ew", ipady=5)
+            
+            remove_act_btn = tk.Button(button_frame, text="Remove Campers", command=open_remove_activity_window, 
+                                      bg="red", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                      activebackground="darkred", activeforeground="white",
+                                      relief="raised", bd=2)
+            remove_act_btn.grid(row=0, column=1, padx=5, pady=5, sticky="ew", ipady=5)
 
         activity_label = tk.Label(makecampframe, text="Activities", bg="dodgerblue", font=("Comic Sans MS", 18))
         activity_label.grid(row=1, column=0, columnspan=3, sticky="ew", padx=10, pady=(5, 10))
@@ -603,6 +1127,26 @@ def show_others(): #maybe also add a key above the map for tent icons
         rock_climbing_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
                                         font=("Comic Sans MS", 18))
         rock_climbing_notes.grid(row=5, column=2, sticky="ew", padx=10, pady=(5, 10))
+
+         # Campers section
+        campers_label = tk.Label(makecampframe, text="Campers", bg="dodgerblue", font=("Comic Sans MS", 18))
+        campers_label.grid(row=6, column=0, columnspan=3, sticky="ew", padx=10, pady=(5, 10))
+
+        add_campers_label = tk.Label(makecampframe, text="Add Campers", bg="white", fg="black", font=("Comic Sans MS", 18))
+        add_campers_label.grid(row=7, column=0, sticky="ew", padx=10, pady=(10, 5))
+
+        add_campers_button = tk.Button(makecampframe, text="Add to Camp",
+                                       command=open_add_campers_window, bg="white",
+                                       font=("Comic Sans MS", 18))
+        add_campers_button.grid(row=7, column=1, columnspan=2, sticky="ew", padx=10, pady=(10, 5))
+
+        remove_campers_label = tk.Label(makecampframe, text="Remove Campers", bg="white", fg="black", font=("Comic Sans MS", 18))
+        remove_campers_label.grid(row=8, column=0, sticky="ew", padx=10, pady=(5, 10))
+
+        remove_campers_button = tk.Button(makecampframe, text="Remove from Camp",
+                                          command=open_remove_campers_window, bg="white",
+                                          font=("Comic Sans MS", 18))
+        remove_campers_button.grid(row=8, column=1, columnspan=2, sticky="ew", padx=10, pady=(5, 10))
 
     # Generating tent icons on the map based on leader's camps
     positions = leaders[placeholder].create_leader_dict(camp_dict, location_coords)
@@ -670,12 +1214,103 @@ def show_others(): #maybe also add a key above the map for tent icons
     
     """Button Frame/window + Button Creation"""
     global ntfsubframe
-    ntfsubframe = tk.Frame(canvas, width=500, height=120, bg="lightblue") # dimensions for notification widget
+    ntfsubframe = tk.Frame(canvas, width=500, height=120, bg="lightblue")
     ntfsubframe.grid_columnconfigure(0, weight=1)
     ntfsubframe.grid_columnconfigure(1, weight=1)
     ttk.Button(ntfsubframe, text="Back to Dashboard",
            command=show_main_dashboard).grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-    ttk.Button(ntfsubframe, text="Coming Soon").grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+    
+    """statistics window function"""
+    def open_statistics_window():
+        stats_window = tk.Toplevel()
+        stats_window.title(f"Statistics - {selected_leader.username}")
+        stats_window.geometry("600x700")
+        stats_window.configure(bg="lightblue")
+        
+        stats_window.grid_columnconfigure(0, weight=1)
+        stats_window.grid_rowconfigure(1, weight=1)
+        
+        stats_title = tk.Label(stats_window, text=f"Statistics for {selected_leader.username}",
+                              bg="dodgerblue", font=("Comic Sans MS", 18), fg="white")
+        stats_title.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
+        
+        """Get statistics"""
+        stats_data = selected_leader.get_leader_statistics()
+        
+        if not stats_data.get("success"):
+            no_stats_label = tk.Label(stats_window, text="No camps assigned yet",
+                                     bg="white", fg="black", font=("Comic Sans MS", 14))
+            no_stats_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+            return
+        
+        canvas_frame = tk.Canvas(stats_window, bg="white", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(stats_window, orient="vertical", command=canvas_frame.yview)
+        scrollable_frame = tk.Frame(canvas_frame, bg="white")
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas_frame.configure(scrollregion=canvas_frame.bbox("all"))
+        )
+        
+        canvas_frame.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas_frame.configure(yscrollcommand=scrollbar.set)
+        
+        canvas_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        scrollbar.grid(row=1, column=1, sticky="ns")
+        stats_window.grid_rowconfigure(1, weight=1)
+        
+        # Overall stats
+        overall = stats_data.get("overall", {})
+        overall_frame = tk.LabelFrame(scrollable_frame, text="Overall Statistics",
+                                     bg="dodgerblue", fg="white", font=("Comic Sans MS", 12, "bold"))
+        overall_frame.pack(fill="x", padx=5, pady=5)
+        
+        overall_info = [
+            f"Total Camps: {overall.get('total_camps', 0)}",
+            f"Total Campers: {overall.get('total_campers', 0)}",
+            f"Total Activities: {overall.get('total_activities', 0)}",
+            f"Activity Utilisation: {overall.get('activity_utilisation_rate', 0)}%",
+            f"Total Pay: ${overall.get('total_pay', 0)}",
+            f"Food Supply: {overall.get('total_food_supply', 0)} | Demand: {overall.get('total_food_demand', 0)} | Surplus: {overall.get('food_surplus', 0)}"
+        ]
+        
+        for info in overall_info:
+            tk.Label(overall_frame, text=info, bg="dodgerblue", fg="white",
+                    font=("Comic Sans MS", 10)).pack(anchor="w", padx=10, pady=2)
+        
+        # Per-camp stats
+        camps = stats_data.get("camps", [])
+        for camp in camps:
+            camp_frame = tk.LabelFrame(scrollable_frame, text=f"{camp['camp_name']} - {camp['location']}",
+                                      bg="lightblue", font=("Comic Sans MS", 11, "bold"))
+            camp_frame.pack(fill="x", padx=5, pady=5)
+            
+            camp_info = [
+                f"Duration: {camp['duration']}",
+                f"Participation: {camp['participation']['assigned_campers']}/{camp['participation']['total_campers']} ({camp['participation']['participation_rate']}%)",
+                f"Activities: {camp['activities']['total_filled']}/{camp['activities']['total_capacity']} slots ({camp['activities']['utilisation_rate']}%)",
+                f"Daily Food: Supply {camp['food']['daily_supply']} | Demand {camp['food']['daily_demand']} | Surplus {camp['food']['daily_surplus']:+d}",
+                f"Pay: ${camp['pay']}"
+            ]
+            
+            for info in camp_info:
+                tk.Label(camp_frame, text=info, bg="white", fg="black",
+                        font=("Comic Sans MS", 9)).pack(anchor="w", padx=10, pady=1)
+            
+            # Comments section
+            if camp.get("additional_comments"):
+                comments_label = tk.Label(camp_frame, text="Comments:", bg="white", fg="black",
+                                        font=("Comic Sans MS", 9, "bold"))
+                comments_label.pack(anchor="w", padx=10, pady=(5, 2))
+                
+                for comment in camp["additional_comments"]:
+                    comment_text = f"• {comment['activity_name']}: {comment['comment']}"
+                    tk.Label(camp_frame, text=comment_text, bg="white", fg="black",
+                            font=("Comic Sans MS", 8), wraplength=300, justify="left").pack(anchor="w", padx=20, pady=1)
+    
+    ttk.Button(ntfsubframe, text="View Statistics",
+           command=open_statistics_window).grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+    
     global ntf_window
     ntf_window = canvas.create_window(320,190, window = ntfsubframe)
 
