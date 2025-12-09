@@ -8,6 +8,7 @@ from tkinter import ttk
 import datetime
 from types import SimpleNamespace
 from ScoutLeader import ScoutLeader
+import pandas as pd
 
 
 
@@ -15,11 +16,13 @@ from ScoutLeader import ScoutLeader
 """
 Core Setup (Root Window / Canvas Creation + Background Image on canvas)
 """
+# Defines which leader the code will be showing
+placeholder = "leader2"
 # Root/Canvas Creation
 root = tk.Tk()
 root.geometry("1280x720")
 root.resizable(False, False)
-root.title("CampTrack / Name of the role here / Dashboard") #Maybe this should be username instead?
+root.title(f"CampTrack / {placeholder} / Dashboard")
 
 canvas = tk.Canvas(root, width="1280", height="720", bg="white")
 canvas.pack(expand=True, fill="both")
@@ -35,7 +38,6 @@ canvas.tag_lower(canvas_bg)
 Leader and Camp Data Loading
 """
 CAMPS_FILE = "data/camps.csv"
-placeholder = "leader1"
 leaders = ScoutLeader.load_leaders("data/users.csv")
 selected_leader = leaders[placeholder]
 camp_dict = selected_leader.load_camps_for_leader(CAMPS_FILE)
@@ -126,7 +128,6 @@ photoimageplanned = tk.PhotoImage(file="amber.png")
 photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
 
 tent_icons = {}
-location_label = None
 
 location_coords = {
     "Sonelgaz Aokas": (310, 40),
@@ -319,24 +320,15 @@ def show_others(): #maybe also add a key above the map for tent icons
     mapsubcanvas.tent_highlighted = photoimagetent_highlighted
 
     """LOGIC for tent icon interactions on the map canvas & subsequent window/frames"""
-    # Click event function for tent icons: Display location name Label and reveal the camp treeview and create camp window"
+    # Click event function for tent icons
     def on_click(event, item):
         if messagebox.askyesno(f"{tent_icons.get(item)}",
                                f"{tent_icons.get(item)} located at ({event.x}, {event.y}). Go to location?"):
-            global current_location, location_label
+            global current_location
             current_location = tent_icons.get(item)  # maybe don't use get, just use tent_icons[item]
-
-            if location_label is not None:
-                location_label.destroy()
-
-            location_label = tk.Label(
-                canvas,
-                text=f"{current_location}",
-                font=("Comic Sans MS", 30),
-                fg="white",
-                bg="#1095d6"
-            )
-            location_label.place(x=640, y=20, anchor="n")
+            loc_title = tk.Label(canvas, text=f"{current_location}", font=("Comic Sans MS", 30), fg="white",
+                                 bg="#1095d6")
+            loc_title.place(x=640, y=20, anchor="n")
             show_camps_treeview()
             show_create_camp_window()
 
@@ -477,16 +469,27 @@ def show_others(): #maybe also add a key above the map for tent icons
     makecampframe.pack(expand=True, fill="both", padx=10, pady=10)
 
     def show_create_camp_window(camp_obj=None):
-        if camp_obj is None:
-            return
-
+        canvas.itemconfigure(create_camp_window, state="normal")
+        canvas.itemconfigure(map_window, state="hidden")
         for widget in makecampframe.winfo_children():
             widget.destroy()
+
+        #canvas.itemconfigure(create_camp_window, state="normal")
+        #canvas.itemconfigure(map_window, state="hidden")
+        #for widget in makecampframe.winfo_children():
+        #    widget.destroy()
+
+
+        #for widget in makecampframe.winfo_children():
+        #    widget.destroy()
 
         canvas.itemconfigure(create_camp_window, state="normal")
         canvas.itemconfigure(map_window, state="hidden")
         canvas.tag_raise(create_camp_window)
         canvas.update_idletasks()
+
+        for i in range(3):
+            makecampframe.grid_columnconfigure(i, weight=1)
 
         tk.Label(
             makecampframe,
@@ -499,50 +502,107 @@ def show_others(): #maybe also add a key above the map for tent icons
             print("Hello World!")
 
         # New window to show campers for each activity
-        def open_new_window(activity_name):
-            new_window = tk.Toplevel()
-            new_window.title(f"Campers for {activity_name}")
-            new_window.geometry("300x200")
+        def open_activity_window(activity_name):
+            activity_window = tk.Toplevel()
+            activity_window.title(f"Campers for {activity_name}")
+            activity_window.geometry("400x400")
 
-            campers_tree = ttk.Treeview(new_window)
-            campers_tree.pack(fill="both", expand=True)
+            activity_window.configure(bg="lightblue")
 
-            campers_tree["columns"] = list()
+            activity_window.grid_columnconfigure(0, weight=1)
+            activity_window.grid_rowconfigure(1, weight=1)
+
+            activity_window_title = tk.Label(activity_window, text=f"Campers assigned to {activity_name}",
+                                             bg="dodgerblue", font=("Comic Sans MS", 22))
+            activity_window_title.grid(row=0, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 5))
+
+            df = leaders[placeholder].get_campers_for_activity(camp_obj.name)
+            df = df.set_index("activity_name")
+            assigned_campers = df.loc[activity_name, "assigned_campers"]
+
+            if pd.isna(assigned_campers) or assigned_campers == "":
+                assigned_campers_list = []
+            elif isinstance(assigned_campers, str):
+                assigned_campers_list = [x.strip() for x in assigned_campers.split(",")]
+            else:
+                assigned_campers_list = assigned_campers
+
+            if not assigned_campers_list:
+                no_campers_label = tk.Label(activity_window, text="No campers assigned",
+                                            bg="white", fg="black", font=("Comic Sans MS", 16))
+                no_campers_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=(5, 10))
+            else:
+
+                df = leaders[placeholder].get_camper_id_to_names(assigned_campers_list)
+
+                tree_frame = tk.Frame(activity_window)
+                tree_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+
+                campers_tree = ttk.Treeview(tree_frame, columns=list(df.columns), show="headings")
+                campers_tree.pack(fill="both", expand=True)
+
+                for col in df.columns:
+                    campers_tree.heading(col, text=col)
+                    campers_tree.column(col, anchor='center')
+
+                for _, row in df.iterrows():
+                    campers_tree.insert("", "end", values=list(row))
+
+            add_campers = tk.Button(activity_window, text="Add Camper", command=placeholder_function, bg="white",
+                                    font=("Comic Sans MS", 18))
+            add_campers.grid(row=2, column=0, sticky="ew", padx=10, pady=(5, 10))
 
         activity_label = tk.Label(makecampframe, text="Activities", bg="dodgerblue", font=("Comic Sans MS", 18))
         activity_label.grid(row=1, column=0, columnspan=3, sticky="ew", padx=10, pady=(5, 10))
 
-        hiking_label = tk.Label(makecampframe, text="Hiking", bg="black", font=("Comic Sans MS", 18))
+        hiking_label = tk.Label(makecampframe, text="Hiking", bg="white", fg="black", font=("Comic Sans MS", 18))
         hiking_label.grid(row=2, column=0, sticky="ew", padx=10, pady=(10, 5))
 
-        view_hiking_camps = tk.Button(makecampframe, text="View Campers", command=lambda: open_new_window("hiking"), bg="white", font=("Comic Sans MS", 18))
+        view_hiking_camps = tk.Button(makecampframe, text="View Campers",
+                                      command=lambda: open_activity_window("Hiking"), bg="white",
+                                      font=("Comic Sans MS", 18))
         view_hiking_camps.grid(row=2, column=1, sticky="ew", padx=10, pady=(10, 5))
 
-        hiking_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white", font=("Comic Sans MS", 18))
+        hiking_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+                                 font=("Comic Sans MS", 18))
         hiking_notes.grid(row=2, column=2, sticky="ew", padx=10, pady=(10, 5))
 
-        test3 = tk.Button(makecampframe, text="ph2", command=placeholder_function)
-
-        archery_label = tk.Label(makecampframe, text="Archery", bg="black", font=("Comic Sans MS", 18))
+        archery_label = tk.Label(makecampframe, text="Archery", bg="white", fg="black", font=("Comic Sans MS", 18))
         archery_label.grid(row=3, column=0, sticky="ew", padx=10, pady=(5, 5))
 
-        view_archery_camps = tk.Button(makecampframe, text="View Campers", command=lambda: open_new_window("archery"), bg="white",
-                                      font=("Comic Sans MS", 18))
+        view_archery_camps = tk.Button(makecampframe, text="View Campers",
+                                       command=lambda: open_activity_window("Archery"), bg="white",
+                                       font=("Comic Sans MS", 18))
         view_archery_camps.grid(row=3, column=1, sticky="ew", padx=10, pady=(5, 5))
 
-        campfire_label = tk.Label(makecampframe, text="Campfire", bg="black", font=("Comic Sans MS", 18))
+        archery_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+                                  font=("Comic Sans MS", 18))
+        archery_notes.grid(row=3, column=2, sticky="ew", padx=10, pady=(5, 5))
+
+        campfire_label = tk.Label(makecampframe, text="Campfire", bg="white", fg="black", font=("Comic Sans MS", 18))
         campfire_label.grid(row=4, column=0, sticky="ew", padx=10, pady=(5, 5))
 
-        view_campfire_camps = tk.Button(makecampframe, text="View Campers", command=lambda: open_new_window("campfire"), bg="white",
-                                       font=("Comic Sans MS", 18))
+        view_campfire_camps = tk.Button(makecampframe, text="View Campers",
+                                        command=lambda: open_activity_window("Campfire"), bg="white",
+                                        font=("Comic Sans MS", 18))
         view_campfire_camps.grid(row=4, column=1, sticky="ew", padx=10, pady=(5, 5))
 
-        rock_climbing_label = tk.Label(makecampframe, text="Rock Climbing", bg="black", font=("Comic Sans MS", 18))
+        campfire_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+                                   font=("Comic Sans MS", 18))
+        campfire_notes.grid(row=4, column=2, sticky="ew", padx=10, pady=(5, 5))
+
+        rock_climbing_label = tk.Label(makecampframe, text="Rock Climbing", bg="white", fg="black",
+                                       font=("Comic Sans MS", 18))
         rock_climbing_label.grid(row=5, column=0, sticky="ew", padx=10, pady=(5, 10))
 
-        view_rock_climbing_camps = tk.Button(makecampframe, text="View Campers", command=lambda: open_new_window("rock climbing"), bg="white",
-                                       font=("Comic Sans MS", 18))
+        view_rock_climbing_camps = tk.Button(makecampframe, text="View Campers",
+                                             command=lambda: open_activity_window("Rock Climbing"), bg="white",
+                                             font=("Comic Sans MS", 18))
         view_rock_climbing_camps.grid(row=5, column=1, sticky="ew", padx=10, pady=(5, 10))
+
+        rock_climbing_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+                                        font=("Comic Sans MS", 18))
+        rock_climbing_notes.grid(row=5, column=2, sticky="ew", padx=10, pady=(5, 10))
 
     # Generating tent icons on the map based on leader's camps
     positions = leaders[placeholder].create_leader_dict(camp_dict, location_coords)
