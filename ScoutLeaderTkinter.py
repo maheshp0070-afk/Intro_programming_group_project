@@ -1075,6 +1075,43 @@ def show_others(): #maybe also add a key above the map for tent icons
                                       activebackground="darkred", activeforeground="white",
                                       relief="raised", bd=2)
             remove_act_btn.grid(row=0, column=1, padx=5, pady=5, sticky="ew", ipady=5)
+        
+        def open_extra_notes_window(activity_name):
+                activity_window = tk.Toplevel()
+                activity_window.title(f"Extra notes for {activity_name}")
+                activity_window.geometry("400x400")
+
+                activity_window.configure(bg="lightblue")
+
+                activity_window.grid_columnconfigure(0, weight=1)
+                activity_window.grid_rowconfigure(1, weight=1)
+
+                activity_window_title = tk.Label(activity_window, text=f"Extra notes for {activity_name}",
+                                                 bg="dodgerblue", font=("Comic Sans MS", 22))
+                activity_window_title.grid(row=0, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 5))
+
+                df = leaders[placeholder].get_notes_for_activity(camp_obj.name)
+
+                # Filter only by activity_name
+                df_activity = df[df["activity_name"] == activity_name]
+
+                tree_frame = tk.Frame(activity_window)
+                tree_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+
+                campers_tree = ttk.Treeview(tree_frame, columns=["activity_name", "extra_notes"], show="headings")
+                campers_tree.pack(fill="both", expand=True)
+
+                campers_tree.heading("activity_name", text="Activity Name")
+                campers_tree.heading("extra_notes", text="Extra Notes")
+                campers_tree.column("activity_name", anchor='center')
+                campers_tree.column("extra_notes", anchor='center')
+
+                # Insert all rows, replacing empty notes with placeholder
+                for _, row in df_activity.iterrows():
+                    notes = row["extra_notes"]
+                    if pd.isna(notes) or notes == "":
+                        notes = "No notes added"
+                    campers_tree.insert("", "end", values=[row["activity_name"], notes])
 
         activity_label = tk.Label(makecampframe, text="Activities", bg="dodgerblue", font=("Comic Sans MS", 18))
         activity_label.grid(row=1, column=0, columnspan=3, sticky="ew", padx=10, pady=(5, 10))
@@ -1087,7 +1124,7 @@ def show_others(): #maybe also add a key above the map for tent icons
                                       font=("Comic Sans MS", 18))
         view_hiking_camps.grid(row=2, column=1, sticky="ew", padx=10, pady=(10, 5))
 
-        hiking_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+        hiking_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Hiking"), bg="white",
                                  font=("Comic Sans MS", 18))
         hiking_notes.grid(row=2, column=2, sticky="ew", padx=10, pady=(10, 5))
 
@@ -1099,7 +1136,7 @@ def show_others(): #maybe also add a key above the map for tent icons
                                        font=("Comic Sans MS", 18))
         view_archery_camps.grid(row=3, column=1, sticky="ew", padx=10, pady=(5, 5))
 
-        archery_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+        archery_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Archery"), bg="white",
                                   font=("Comic Sans MS", 18))
         archery_notes.grid(row=3, column=2, sticky="ew", padx=10, pady=(5, 5))
 
@@ -1111,7 +1148,7 @@ def show_others(): #maybe also add a key above the map for tent icons
                                         font=("Comic Sans MS", 18))
         view_campfire_camps.grid(row=4, column=1, sticky="ew", padx=10, pady=(5, 5))
 
-        campfire_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+        campfire_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Campfire"), bg="white",
                                    font=("Comic Sans MS", 18))
         campfire_notes.grid(row=4, column=2, sticky="ew", padx=10, pady=(5, 5))
 
@@ -1124,7 +1161,7 @@ def show_others(): #maybe also add a key above the map for tent icons
                                              font=("Comic Sans MS", 18))
         view_rock_climbing_camps.grid(row=5, column=1, sticky="ew", padx=10, pady=(5, 10))
 
-        rock_climbing_notes = tk.Button(makecampframe, text="Notes", command=placeholder_function, bg="white",
+        rock_climbing_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Rock Climbing"), bg="white",
                                         font=("Comic Sans MS", 18))
         rock_climbing_notes.grid(row=5, column=2, sticky="ew", padx=10, pady=(5, 10))
 
@@ -1214,11 +1251,18 @@ def show_others(): #maybe also add a key above the map for tent icons
     
     """Button Frame/window + Button Creation"""
     global ntfsubframe
-    ntfsubframe = tk.Frame(canvas, width=500, height=120, bg="lightblue")
+    ntfsubframe = tk.Frame(canvas, width=520, height=140, bg="lightblue")
     ntfsubframe.grid_columnconfigure(0, weight=1)
     ntfsubframe.grid_columnconfigure(1, weight=1)
+    ntfsubframe.grid_rowconfigure(0, weight=1)
+    ntfsubframe.pack_propagate(False)
+    # Styles for buttons
+    style = ttk.Style()
+    style.configure("Board.TButton", font=("Comic Sans MS", 16, "bold"), padding=(20, 20))
+    # Button for going back to dashboard
     ttk.Button(ntfsubframe, text="Back to Dashboard",
-           command=show_main_dashboard).grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+           style="Board.TButton",
+           command=show_main_dashboard).grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
     
     """statistics window function"""
     def open_statistics_window():
@@ -1309,10 +1353,11 @@ def show_others(): #maybe also add a key above the map for tent icons
                             font=("Comic Sans MS", 8), wraplength=300, justify="left").pack(anchor="w", padx=20, pady=1)
     
     ttk.Button(ntfsubframe, text="View Statistics",
-           command=open_statistics_window).grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+           style="Board.TButton",
+           command=open_statistics_window).grid(row=0, column=1, sticky="nsew", padx=12, pady=12)
     
     global ntf_window
-    ntf_window = canvas.create_window(320,190, window = ntfsubframe)
+    ntf_window = canvas.create_window(320, 190, width=520, height=140, window = ntfsubframe)
 
     
     
@@ -1330,7 +1375,7 @@ def show_others(): #maybe also add a key above the map for tent icons
     tk.Label(header, text=placeholder, font=("Comic Sans MS", 18), background='#1095d6', fg="white").grid(row=0, column=0,
                                                                                           sticky='w', padx=10,
                                                                                           pady=10)
-    ttk.Button(header, text="Logout").grid(row=0, column=1, sticky='e', padx=10, pady=10) #add command 'logout' to this
+    ttk.Button(header, text="Logout",  command = lambda: root.destroy() if messagebox.askyesno("Logout","Are you sure you want to logout?") else None).grid(row=0, column=1, sticky='e', padx=10, pady=10)
 
     
 
