@@ -630,7 +630,29 @@ class ScoutLeader(User):
             "overall": overall_stats
         }
 
+    def get_campers_for_activity(self, chosen_camp):
+        """Gets the activities for a camp and their campers"""
+        df_activities = pd.read_csv("data/activities.csv")
+        df_chosen_camp = df_activities[df_activities["camp_name"] == chosen_camp]
+        df_activity_campers = df_chosen_camp[["activity_name", "assigned_campers"]]
+        return df_activity_campers
 
+    def get_notes_for_activity(self, chosen_camp):
+        """Gets the notes for a given activity"""
+        df_activities = pd.read_csv("data/activities.csv")
+        df_chosen_camp = df_activities[df_activities["camp_name"] == chosen_camp]
+        df_activity_notes = df_chosen_camp[["activity_name", "extra_notes"]]
+        return df_activity_notes.to_string()
 
-leaders = ScoutLeader.load_leaders("data/users.csv")
+    def get_camper_id_to_names(self, chosen_campers):
+        """Gets the names of each camper associated with their id for given camper_ids"""
+        df_campers = pd.read_csv("data/campers.csv")
+        df_campers["camper_id"] = df_campers["camper_id"].astype(str).str.strip()
+        chosen_campers_str = [str(c).strip() for c in chosen_campers]
+        #print(df_campers.dtypes)
+        #print(df_campers["camper_id"].tolist())
+        df_campers["full_name"] = df_campers["first_name"] + " " + df_campers["last_name"]
+        df_filtered = df_campers[df_campers["camper_id"].isin(chosen_campers_str)]
+        return df_filtered[["camper_id", "full_name"]]
+
 
