@@ -5,9 +5,6 @@ import datetime
 
 
 class ScoutLeader(User):
-    pd_camps = Camp.load_camps("data/camps.csv")
-    pd_users = User.load_users("data/users.csv")
-
     def __init__(self, username, password, status="status"):
         super().__init__(username, password, role="leader", status=status)
 
@@ -434,7 +431,7 @@ class ScoutLeader(User):
         if pd.isna(cell):
             cell = ""
         
-        cell = cell + notes
+        cell = cell + " " + notes
         df_activities.loc[activity, "extra_notes"] = cell
         df_activities.to_csv("data/activities.csv", index=True)
         
@@ -446,25 +443,30 @@ class ScoutLeader(User):
         }
 
     def remove_activity_outcomes(self, activity, notes):
-        """Allows leader to remove activity outcomes. Returns status message."""
+        """Allows leader to remove activity outcomes"""
         df_activities = pd.read_csv("data/activities.csv", index_col="activity_id", dtype={"extra_notes": str})
-        
+
         if activity not in df_activities.index:
             raise ValueError(f"Activity {activity} does not exist")
-        
+
         cell = df_activities.loc[activity, "extra_notes"]
         if pd.isna(cell):
             cell = ""
-        
+
         if cell.find(notes) == -1:
-            return {
-                "success": False,
-                "message": f"'{notes}' was not found in activity {activity} notes",
-                "activity_id": activity,
-                "notes": cell
-            }
+            return False
+            # {
+            #   "success": False,
+            #  "message": f"'{notes}' was not found in activity {activity} notes",
+            # "activity_id": activity,
+            # "notes": cell
+            # }
         else:
             cell = cell.replace(notes, "")
+            while "  " in cell:
+                cell = cell.replace("  ", " ")
+            if cell.strip() == "":
+                cell = ""
             df_activities.loc[activity, "extra_notes"] = cell
             df_activities.to_csv("data/activities.csv", index=True)
             return {
@@ -634,7 +636,7 @@ class ScoutLeader(User):
         df_activities = pd.read_csv("data/activities.csv")
         df_chosen_camp = df_activities[df_activities["camp_name"] == chosen_camp]
         df_activity_notes = df_chosen_camp[["activity_name", "extra_notes"]]
-        return df_activity_notes.to_string()
+        return df_activity_notes
 
     def get_camper_id_to_names(self, chosen_campers):
         """Gets the names of each camper associated with their id for given camper_ids"""
