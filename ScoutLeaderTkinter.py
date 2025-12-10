@@ -1380,7 +1380,7 @@ def ScoutLeaderPage(leader_username):
         msg_window = canvas.create_window(320,525, window = msgsubframe)
         try:
             from msg_system import MessagingApp
-            MessagingApp(msgsubframe)
+            MessagingApp(msgsubframe, leader_username)
         except Exception as e:
             error_label = tk.Label(msgsubframe, text="Messaging unavailable", font=("Comic Sans MS", 14), bg="white")
             error_label.grid(row=0, column=0, padx=10, pady=10)
