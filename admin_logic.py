@@ -94,10 +94,31 @@ class UserManager:
                 break
 
     @classmethod
-    def disable_account(cls,username):
+    def enable_user(cls, username, frame, treeview):
+        users = cls.load_users()
+        users.loc[users["username"] == username, "status"] = True
+        users.to_csv(filepath, index=False)
+        frame.destroy()
+
+        messagebox.showinfo("Success", f"Successfully Enabled {username}")
+        for item in treeview.get_children():
+            if treeview.item(item, "values")[0] == username:
+                old_values = list(treeview.item(item, "values"))
+                old_values[3] = "True"
+                treeview.item(item, values=old_values)
+                break
+
+    @classmethod
+    def disable_user(cls, username, frame, treeview):
         users = cls.load_users()
         users.loc[users["username"] == username, "status"] = False
-        logging.info(f"User Disabled: {username}")
         users.to_csv(filepath, index=False)
+        frame.destroy()
+        messagebox.showinfo("Success", f"Successfully Disabled {username}")
 
-
+        for item in treeview.get_children():
+            if treeview.item(item, "values")[0] == username:
+                old_values = list(treeview.item(item, "values"))
+                old_values[3] = "False"
+                treeview.item(item, values=old_values)
+                break
