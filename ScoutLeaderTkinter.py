@@ -1319,22 +1319,16 @@ def ScoutLeaderPage(leader_username):
         MESSAGE FRAME: Placing a frame on the Message Board, then placing the messaging app inside the frame
         """
         global msgsubframe
-        msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white") # dimensions for messaging widget
+        msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white")
         global msg_window
         msg_window = canvas.create_window(320,525, window = msgsubframe)
-        # Instantiate the MessagingApp from Msg_service (same call as in admin_GUI.py)
-        # Import locally to avoid top-level import issues — same pattern as AdminPage.
         try:
-            from Msg_service import MessagingApp
-            print("msgsubframe:", msgsubframe, "type:", type(msgsubframe))
-            print("msg_window:", msg_window, "type:", type(msg_window))
+            from msg_system import MessagingApp
             MessagingApp(msgsubframe)
         except Exception as e:
-            # If MessagingApp import/initialisation fails we show a placeholder and print the error
-            tk.Label(msgsubframe, text="Messaging unavailable", font=("Comic Sans MS", 14)).pack(padx=10, pady=10)
+            error_label = tk.Label(msgsubframe, text="Messaging unavailable", font=("Comic Sans MS", 14), bg="white")
+            error_label.grid(row=0, column=0, padx=10, pady=10)
             print("Failed to load MessagingApp:", e)
-        # --- End messaging widget ---
-
 
         """
         BACK TO MAP FRAME: Placing a frame on the Message Board, then placing 2 button widgets 
@@ -1369,9 +1363,25 @@ def ScoutLeaderPage(leader_username):
         style = ttk.Style()
         style.configure("Board.TButton", font=("Comic Sans MS", 16, "bold"), padding=(20, 20))
         # Button for going back to dashboard
-        ttk.Button(ntfsubframe, text="Back to Dashboard",
-               style="Board.TButton",
-               command=show_main_dashboard).grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+        back_btn = tk.Button(ntfsubframe, text="Back to Dashboard",
+                        command=show_main_dashboard,
+                        bg="#FFFFFF", fg="black",
+                        font=("Comic Sans MS", 14, "bold"),
+                        activebackground="#FFFFFF", activeforeground="black",
+                        relief="raised", bd=3,
+                        padx=15, pady=15,
+                        cursor="hand2")
+        back_btn.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+    
+    # Add hover effects for back button
+        def on_enter_back(event):
+            back_btn.config(bg="#1B5E20", relief="sunken", bd=4)
+    
+        def on_leave_back(event):
+            back_btn.config(bg="#2E7D32", relief="raised", bd=3)
+    
+        back_btn.bind("<Enter>", on_enter_back)
+        back_btn.bind("<Leave>", on_leave_back)
 
         """statistics window function"""
         def open_statistics_window():
@@ -1461,9 +1471,25 @@ def ScoutLeaderPage(leader_username):
                         tk.Label(camp_frame, text=comment_text, bg="white", fg="black",
                                 font=("Comic Sans MS", 8), wraplength=300, justify="left").pack(anchor="w", padx=20, pady=1)
 
-        ttk.Button(ntfsubframe, text="View Statistics",
-               style="Board.TButton",
-               command=open_statistics_window).grid(row=0, column=1, sticky="nsew", padx=12, pady=12)
+        stats_btn = tk.Button(ntfsubframe, text="View Statistics",
+                         command=open_statistics_window,
+                         bg="#FFFFFF", fg="black",
+                         font=("Comic Sans MS", 14, "bold"),
+                         activebackground="#FFFFFF", activeforeground="black",
+                         relief="raised", bd=3,
+                         padx=15, pady=15,
+                         cursor="hand2")
+        stats_btn.grid(row=0, column=1, sticky="nsew", padx=12, pady=12)
+    
+    # Add hover effects for stats button
+        def on_enter_stats(event):
+            stats_btn.config(bg="#0D47A1", relief="sunken", bd=4)
+    
+        def on_leave_stats(event):
+            stats_btn.config(bg="#1565C0", relief="raised", bd=3)
+    
+        stats_btn.bind("<Enter>", on_enter_stats)
+        stats_btn.bind("<Leave>", on_leave_stats)
 
         global ntf_window
         ntf_window = canvas.create_window(320, 190, width=520, height=140, window = ntfsubframe)

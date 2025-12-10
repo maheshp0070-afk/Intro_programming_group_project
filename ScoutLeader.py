@@ -5,6 +5,9 @@ import datetime
 
 
 class ScoutLeader(User):
+    pd_camps = Camp.load_camps("data/camps.csv")
+    pd_users = User.load_users("data/users.csv")
+
     def __init__(self, username, password, status="status"):
         super().__init__(username, password, role="leader", status=status)
 
@@ -211,7 +214,7 @@ class ScoutLeader(User):
             raise PermissionError(f"You do not supervise camp {camp_name}")
 
         current_assigned = df_activities.loc[activity_id, "assigned_campers"]
-        current_camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",")] if pd.notna(
+        current_camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",") if c.strip()] if pd.notna(
             current_assigned) and str(current_assigned).strip() else []
 
         # Check for duplicates
@@ -264,7 +267,7 @@ class ScoutLeader(User):
             if pd.isna(current_activities) or str(current_activities).strip() == "":
                 df_campers.loc[camper_id, "activities"] = str(activity_id)
             else:
-                df_campers.loc[camper_id, "activities"] = str(int(float(current_activities))) + f",{activity_id}"
+                df_campers.loc[camper_id, "activities"] = str(((current_activities))) + f",{activity_id}"
 
         df_campers.to_csv("data/campers.csv", index=True)
         
@@ -300,7 +303,7 @@ class ScoutLeader(User):
                 "not_assigned": camper_ids
             }
 
-        camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",")]
+        camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",") if c.strip()]
         removed_campers = []
         not_assigned_campers = []
 
@@ -443,24 +446,23 @@ class ScoutLeader(User):
         }
 
     def remove_activity_outcomes(self, activity, notes):
-        """Allows leader to remove activity outcomes"""
+        """Allows leader to remove activity outcomes. Returns status message."""
         df_activities = pd.read_csv("data/activities.csv", index_col="activity_id", dtype={"extra_notes": str})
-
+        
         if activity not in df_activities.index:
             raise ValueError(f"Activity {activity} does not exist")
-
+        
         cell = df_activities.loc[activity, "extra_notes"]
         if pd.isna(cell):
             cell = ""
-
+        
         if cell.find(notes) == -1:
             return False
-            # {
-            #   "success": False,
-            #  "message": f"'{notes}' was not found in activity {activity} notes",
-            # "activity_id": activity,
-            # "notes": cell
-            # }
+             #   { "success": False,
+             #   "message": f"'{notes}' was not found in activity {activity} notes",
+             #   "activity_id": activity,
+             #   "notes": cell
+            #}
         else:
             cell = cell.replace(notes, "")
             while "  " in cell:
