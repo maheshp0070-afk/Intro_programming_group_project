@@ -5,12 +5,12 @@ import datetime
 import log_coord_logic as lcl
 from Msg_service import MessagingApp
 
-def show_log_coord():
-    lcl.Admin.load_users('users.csv')
-    lcl.Coordinator.load_users('users.csv')
-    lcl.Leader.load_users('users.csv')
-    lcl.User.load_all_users('users.csv')
-    lcl.Camp.load_camps('camps.csv')
+def show_log_coord(login_root = None):
+    lcl.Admin.load_users('data/users.csv')
+    lcl.Coordinator.load_users('data/users.csv')
+    lcl.Leader.load_users('data/users.csv')
+    lcl.User.load_all_users('data/users.csv')
+    lcl.Camp.load_camps('data/camps.csv')
 
     for user in lcl.all_users.values():
 
@@ -18,13 +18,13 @@ def show_log_coord():
 
             coordinator = user
             break
-    global root
-    root = tk.Tk()
-    root.geometry("1280x720")
-    root.resizable(False, False)
-    root.title("CampTrack / Logistics Coordinator / Dashboard") #Maybe this should be username instead?
+    global root2
+    root2 = tk.Toplevel()
+    root2.geometry("1280x720")
+    root2.resizable(False, False)
+    root2.title("CampTrack / Logistics Coordinator / Dashboard") #Maybe this should be username instead?
 
-    canvas = tk.Canvas(root, width="1280", height="720", bg="white")
+    canvas = tk.Canvas(root2, width="1280", height="720", bg="white")
     canvas.pack(expand=True, fill="both")
 
     bg = tk.PhotoImage(file="Desert.png")
@@ -151,7 +151,8 @@ def show_log_coord():
         #ntf system here:
         ntftitle = tk.Label(ntfsubframe, text="Notifications - Camps low on food stock:", font=("Comic Sans MS", 12), bg="white", fg="black")
         ntftitle.pack()
-        lowcamps =  [camp for camp in lcl.camps.values() if camp.food_supply_per_day < camp.food_demand_per_day and camp.end_date + datetime.timedelta(days=1) >= datetime.datetime.today()]
+        
+        lowcamps =  [camp for camp in lcl.camps.values() if ((camp.food_supply_per_day - camp.food_demand_per_day) * (datetime.datetime.today() - camp.start_date).days + camp.topped_up) <10 and camp.end_date + datetime.timedelta(days=1) >= datetime.datetime.today() and camp.start_date <= datetime.datetime.today()]
         ntftext = ttk.Treeview(ntfsubframe, columns=("Camp Name", "Location", "Scout Leader"), show="headings")
 
         ntftext.heading("Camp Name", text="Camp Name")
@@ -205,8 +206,14 @@ def show_log_coord():
         tk.Label(header, text="Logistics Coordinator", font=("Comic Sans MS", 18), background='#1095d6', fg="white").grid(row=0, column=0,
                                                                                             sticky='w', padx=10,
                                                                                             pady=10)
-        ttk.Button(header, text="Logout",  command = lambda: root.destroy() if messagebox.askyesno("Logout","Are you sure you want to logout?") else None).grid(row=0, column=1, sticky='e', padx=10, pady=10)
+        ttk.Button(header, text="Logout",  command = lambda: logout() if messagebox.askyesno("Logout","Are you sure you want to logout?") else None).grid(row=0, column=1, sticky='e', padx=10, pady=10)
 
+        def logout():
+            root2.destroy()
+            if login_root:
+                login_root.deiconify()
+        root2.protocol("WM_DELETE_WINDOW", lambda: logout())
+            
 
     def on_click(event, item):
 
@@ -334,6 +341,7 @@ def show_log_coord():
         camp_name_input = camp_name_entry.get().strip()
         food_input = food_entry.get()
         pay_input = scout_payment.get()
+        
         if (selected_syear == "Select a start year" or selected_smonth == "Select a start month" or selected_sday == "Select a start day" or selected_eyear == "Select an end year" or selected_emonth == "Select an end month" or selected_eday == "Select an end day"):
             tk.messagebox.showerror("Entry date error","Please enter dates in all the dropdown boxes")
         
@@ -403,10 +411,11 @@ def show_log_coord():
                     start_date = selected_sdate,
                     end_date = selected_edate,
                     food_supply_per_day = int(food_input),
-                    pay = int(pay_input)
+                    pay = int(pay_input),
+                    topped_up = 0
                 )
 
-                lcl.Camp.save_camps('camps.csv')
+                lcl.Camp.save_camps('data/camps.csv')
                 sdropdown_years.set("Select a start year")
                 sdropdown_months.set("Select a start month")
                 sdropdown_days.set("Select a start day")
@@ -430,17 +439,17 @@ def show_log_coord():
 
     create_camp_label = tk.Label(Nameframe, text="Please enter camp name:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
     create_camp_label.grid(column = 0, row = 0, pady=5)
-    camp_name_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand = (root.register(lambda x: len(x) < 25), '%P'))
+    camp_name_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand = (root2.register(lambda x: len(x) < 25), '%P'))
     camp_name_entry.grid(column = 1, row = 0, pady=5)
 
     create_food_label = tk.Label(Nameframe, text="Food supply per day:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
     create_food_label.grid(column = 0, row = 1, pady=5)
-    food_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <100) or x == ""), '%P'))
+    food_entry = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root2.register(lambda x: (x.isdigit() and int(x) <100) or x == ""), '%P'))
     food_entry.grid(column = 1, row = 1 , pady=5)
 
     payment_label = tk.Label(Nameframe, text="Daily payment rate for scout leader:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
     payment_label.grid(column = 0, row = 2, pady=5)
-    scout_payment = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <10000) or x == ""), '%P'))
+    scout_payment = tk.Entry(Nameframe, width=30, validate = "key", validatecommand=(root2.register(lambda x: (x.isdigit() and int(x) <10000) or x == ""), '%P'))
     scout_payment.grid(column = 1, row = 2 , pady=5)
 
     sdropdown_years = ttk.Combobox(startframe, values=get_years(), state="readonly")
@@ -490,7 +499,7 @@ def show_log_coord():
     def show_edit_camp(camp, state):
 
         global edit_camp_window
-        global root
+        global root2
         global editcampframe
 
         try:
@@ -514,13 +523,13 @@ def show_log_coord():
 
         edit_camp_label = tk.Label(Nameeditframe, text="Camp name:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
         edit_camp_label.grid(column = 0, row = 0, pady=5)
-        camp_name_edit = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand = (root.register(lambda x: len(x) < 25), '%P'))
+        camp_name_edit = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand = (root2.register(lambda x: len(x) < 25), '%P'))
         camp_name_edit.grid(column = 1, row = 0, pady=5)
         camp_name_edit.insert(0, camp.name)
 
         edit_food_label = tk.Label(Nameeditframe, text="Food supply per day:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
         edit_food_label.grid(column = 0, row = 1, pady=5)
-        food_edit_entry = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <100) or x == ""), '%P'))
+        food_edit_entry = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand=(root2.register(lambda x: (x.isdigit() and int(x) <100) or x == ""), '%P'))
         food_edit_entry.grid(column = 1, row = 1 , pady=5)
         food_edit_entry.insert(0, camp.food_supply_per_day)
 
@@ -533,7 +542,11 @@ def show_log_coord():
 
         stock_label = tk.Label(Nameeditframe, text="Current food stock:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
         stock_label.grid(column = 0, row = 3, pady=5)
-        stock_spinbox = tk.Spinbox(Nameeditframe, from_=0, to=10, increment=1, state="readonly", width=28)
+        curr_stock = (camp.food_supply_per_day - camp.food_demand_per_day) * (datetime.datetime.today() - camp.start_date).days + camp.topped_up
+        if curr_stock < 0 or datetime.datetime.today() >= camp.end_date:
+            curr_stock = 0
+
+        stock_spinbox = tk.Spinbox(Nameeditframe, from_= curr_stock, to=300 + curr_stock, increment=10, state="readonly", width=28)
         stock_spinbox.grid(column = 1, row = 3, pady=5)
 
         leader_label = tk.Label(Nameeditframe, text="Scout leader:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
@@ -543,13 +556,13 @@ def show_log_coord():
 
         edit_payment_label = tk.Label(Nameeditframe, text="Daily payment rate for scout leader:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
         edit_payment_label.grid(column = 0, row = 5, pady=5)
-        scout_edit_payment = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand=(root.register(lambda x: (x.isdigit() and int(x) <10000) or x == ""), '%P'))
+        scout_edit_payment = tk.Entry(Nameeditframe, width=30, validate = "key", validatecommand=(root2.register(lambda x: (x.isdigit() and int(x) <10000) or x == ""), '%P'))
         scout_edit_payment.grid(column = 1, row = 5, pady=5)
         scout_edit_payment.insert(0, camp.pay)
 
         num_campers_label = tk.Label(Nameeditframe, text="Number of campers:", bg="lightblue", font=("Comic Sans MS", 10), fg='black')
         num_campers_label.grid(column = 0, row = 6, pady=5)
-        num_campers_value_label = tk.Label(Nameeditframe, text=f"{len(camp.get_campers('campers.csv'))}", bg="white", font=("Comic Sans MS", 8), fg='black', width = 25, height=1, anchor="w")
+        num_campers_value_label = tk.Label(Nameeditframe, text=f"{len(camp.get_campers('data/campers.csv'))}", bg="white", font=("Comic Sans MS", 8), fg='black', width = 25, height=1, anchor="w")
         num_campers_value_label.grid(column = 1, row = 6, pady=5)
 
         #The progress bars are yet to be linked to real data
@@ -616,6 +629,7 @@ def show_log_coord():
             camp_name_input = camp_name_edit.get().strip()
             food_input = food_edit_entry.get()
             pay_input = scout_edit_payment.get()
+            stock = stock_spinbox.get()
             
             if camp_name_input == "":
                 tk.messagebox.showerror("Entry camp name error","Please enter a name for the camp")
@@ -681,8 +695,9 @@ def show_log_coord():
                     camp.food_supply_per_day = int(food_input)
                     camp.pay = int(pay_input)
                     camp.camp_type = camp_type
+                    camp.topped_up = int(stock) - (camp.food_supply_per_day - camp.food_demand_per_day) * (datetime.datetime.now()- camp.start_date).days
 
-                    lcl.Camp.save_camps('camps.csv')
+                    lcl.Camp.save_camps('data/camps.csv')
 
                     for item in camps_treeview.get_children():
                         camps_treeview.delete(item)
@@ -729,8 +744,8 @@ def show_log_coord():
             canvas.itemconfigure(create_camp_window, state="normal")
 
 
-    #root.protocol("WM_DELETE_WINDOW", lambda: None)
-    root.mainloop()
+    
+    root2.mainloop()
 
 if __name__ == "__main__":
     show_log_coord()
