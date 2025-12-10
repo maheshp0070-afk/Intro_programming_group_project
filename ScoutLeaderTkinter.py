@@ -418,8 +418,48 @@ def ScoutLeaderPage(leader_username):
                             )
                         else:
                             messagebox.showinfo("Camp assigned", result.get("message", "You now supervise this camp."))
-                        refresh_leader_camps()
-                        show_camps_treeview()
+                            
+                            # Ask for food requirement per camper
+                            food_requirement_window = tk.Toplevel()
+                            food_requirement_window.title("Set Food Requirement")
+                            food_requirement_window.geometry("400x200")
+                            food_requirement_window.configure(bg="lightblue")
+                            
+                            tk.Label(food_requirement_window, text=f"Food requirement per camper per day for {camp_name}:",
+                                    bg="lightblue", font=("Comic Sans MS", 12), fg="black").pack(pady=10)
+                            
+                            food_entry = tk.Entry(food_requirement_window, font=("Comic Sans MS", 12), width=20)
+                            food_entry.pack(pady=10)
+                            food_entry.focus()
+                            
+                            def set_food_requirement():
+                                try:
+                                    food_req = float(food_entry.get())
+                                    if food_req < 0:
+                                        messagebox.showerror("Invalid input", "Food requirement must be non-negative")
+                                        return
+                                    
+                                    food_result = selected_leader.set_food_requirement_per_camper(camp_name, food_req)
+                                    if food_result.get("success"):
+                                        messagebox.showinfo("Success", 
+                                            f"Food requirement set!\n"
+                                            f"Per camper: {food_req}\n"
+                                            f"Total campers: {food_result.get('total_campers')}\n"
+                                            f"Daily demand: {food_result.get('food_demand')}")
+                                        food_requirement_window.destroy()
+                                    else:
+                                        messagebox.showerror("Error", "Failed to set food requirement")
+                                except ValueError:
+                                    messagebox.showerror("Invalid input", "Please enter a valid number")
+                            
+                            confirm_btn = tk.Button(food_requirement_window, text="Set Requirement",
+                                                   command=set_food_requirement,
+                                                   bg="white", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                                   activebackground="darkgreen")
+                            confirm_btn.pack(pady=10)
+                            
+                            refresh_leader_camps()
+                            show_camps_treeview()
                     else:
                         messagebox.showerror("Unable to assign", result.get("message", "Assignment failed."))
                 return
@@ -631,10 +671,18 @@ def ScoutLeaderPage(leader_username):
                         for camper_id in selected_ids:
                             result = selected_leader.assign_camper(camper_id, camp_obj.name)
                             if not result.get("success"):
-                                messagebox.showerror("Assignment failed", result.get("message", "Unknown error"))
+                                messagebox.showerror("Error", result.get("message", "Failed to assign camper"))
                                 return
 
-                        messagebox.showinfo("Success", f"Added {len(selected_ids)} camper(s) to {camp_obj.name}")
+                        # Recalculate food demand after adding campers
+                        food_result = selected_leader.recalculate_food_demand(camp_obj.name)
+                        if food_result.get("success"):
+                            messagebox.showinfo("Success", 
+                                f"Added {len(selected_ids)} camper(s) to {camp_obj.name}\n"
+                                f"Food demand updated: {food_result.get('food_demand')} units")
+                        else:
+                            messagebox.showinfo("Success", f"Added {len(selected_ids)} camper(s) to {camp_obj.name}")
+                        
                         add_window.destroy()
                     except Exception as e:
                         messagebox.showerror("Error", f"Failed to add campers: {str(e)}")
@@ -757,10 +805,18 @@ def ScoutLeaderPage(leader_username):
                         for camper_id in selected_ids:
                             result = selected_leader.remove_camper(camper_id)
                             if not result.get("success"):
-                                messagebox.showerror("Removal failed", result.get("message", "Unknown error"))
+                                messagebox.showerror("Error", result.get("message", "Failed to remove camper"))
                                 return
 
-                        messagebox.showinfo("Success", f"Removed {len(selected_ids)} camper(s) from {camp_obj.name}")
+                        # Recalculate food demand after removing campers
+                        food_result = selected_leader.recalculate_food_demand(camp_obj.name)
+                        if food_result.get("success"):
+                            messagebox.showinfo("Success", 
+                                f"Removed {len(selected_ids)} camper(s) from {camp_obj.name}\n"
+                                f"Food demand updated: {food_result.get('food_demand')} units")
+                        else:
+                            messagebox.showinfo("Success", f"Removed {len(selected_ids)} camper(s) from {camp_obj.name}")
+                        
                         remove_window.destroy()
                     except Exception as e:
                         messagebox.showerror("Error", f"Failed to remove campers: {str(e)}")
@@ -1387,25 +1443,30 @@ def ScoutLeaderPage(leader_username):
         def open_statistics_window():
             stats_window = tk.Toplevel()
             stats_window.title(f"Statistics - {selected_leader.username}")
-            stats_window.geometry("600x700")
-            stats_window.configure(bg="lightblue")
+            stats_window.geometry("450x600")
+            stats_window.configure(bg="white")
 
             stats_window.grid_columnconfigure(0, weight=1)
             stats_window.grid_rowconfigure(1, weight=1)
 
-            stats_title = tk.Label(stats_window, text=f"Statistics for {selected_leader.username}",
-                                  bg="dodgerblue", font=("Comic Sans MS", 18), fg="white")
-            stats_title.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
+            # Header with title and username
+            header_frame = tk.Frame(stats_window, bg="#1095d6", height=60)
+            header_frame.grid(row=0, column=0, sticky="ew")
+            header_frame.pack_propagate(False)
+            
+            tk.Label(header_frame, text=f"📊 Statistics - {selected_leader.username}",
+                    bg="#1095d6", font=("Comic Sans MS", 18, "bold"), fg="white").pack(anchor="w", padx=20, pady=10)
 
             """Get statistics"""
             stats_data = selected_leader.get_leader_statistics()
 
             if not stats_data.get("success"):
                 no_stats_label = tk.Label(stats_window, text="No camps assigned yet",
-                                         bg="white", fg="black", font=("Comic Sans MS", 14))
-                no_stats_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+                                        bg="white", fg="#666", font=("Comic Sans MS", 14))
+                no_stats_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=50)
                 return
 
+            # Canvas and scrollbar setup
             canvas_frame = tk.Canvas(stats_window, bg="white", highlightthickness=0)
             scrollbar = ttk.Scrollbar(stats_window, orient="vertical", command=canvas_frame.yview)
             scrollable_frame = tk.Frame(canvas_frame, bg="white")
@@ -1418,58 +1479,92 @@ def ScoutLeaderPage(leader_username):
             canvas_frame.create_window((0, 0), window=scrollable_frame, anchor="nw")
             canvas_frame.configure(yscrollcommand=scrollbar.set)
 
-            canvas_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
-            scrollbar.grid(row=1, column=1, sticky="ns")
+            canvas_frame.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
+            scrollbar.grid(row=1, column=1, sticky="ns", padx=0, pady=0)
             stats_window.grid_rowconfigure(1, weight=1)
 
-            # Overall stats
+            # Overall stats - compact card style
             overall = stats_data.get("overall", {})
-            overall_frame = tk.LabelFrame(scrollable_frame, text="Overall Statistics",
-                                         bg="dodgerblue", fg="white", font=("Comic Sans MS", 12, "bold"))
-            overall_frame.pack(fill="x", padx=5, pady=5)
+            overall_frame = tk.Frame(scrollable_frame, bg="#E8F4F8", relief="flat", bd=0)
+            overall_frame.pack(fill="x", padx=10, pady=(15, 10), ipady=10)
 
-            overall_info = [
-                f"Total Camps: {overall.get('total_camps', 0)}",
-                f"Total Campers: {overall.get('total_campers', 0)}",
-                f"Total Activities: {overall.get('total_activities', 0)}",
-                f"Activity Utilisation: {overall.get('activity_utilisation_rate', 0)}%",
-                f"Total Pay: ${overall.get('total_pay', 0)}",
-                f"Food Supply: {overall.get('total_food_supply', 0)} | Demand: {overall.get('total_food_demand', 0)} | Surplus: {overall.get('food_surplus', 0)}"
+            title_label = tk.Label(overall_frame, text="📈 Overall Statistics",
+                                bg="#E8F4F8", font=("Comic Sans MS", 14, "bold"), fg="#1095d6")
+            title_label.pack(anchor="w", padx=10, pady=(5, 10))
+
+            # Create a grid for overall stats (2 columns)
+            stats_grid = tk.Frame(overall_frame, bg="#E8F4F8")
+            stats_grid.pack(fill="x", padx=10, pady=5)
+
+            overall_items = [
+                (f"🏕️  Total Camps", str(overall.get('total_camps', 0))),
+                (f"👥 Total Campers", str(overall.get('total_campers', 0))),
+                (f"🎯 Total Activities", str(overall.get('total_activities', 0))),
+                (f"📊 Activity Usage", f"{overall.get('activity_utilisation_rate', 0)}%"),
+                (f"💰 Total Pay", f"${overall.get('total_pay', 0)}"),
+                (f"🥘 Food Surplus", f"{overall.get('food_surplus', 0)} units"),
             ]
 
-            for info in overall_info:
-                tk.Label(overall_frame, text=info, bg="dodgerblue", fg="white",
-                        font=("Comic Sans MS", 10)).pack(anchor="w", padx=10, pady=2)
+            for idx, (label, value) in enumerate(overall_items):
+                row = idx // 2
+                col = idx % 2
+                
+                stat_box = tk.Frame(stats_grid, bg="white", relief="raised", bd=1)
+                stat_box.grid(row=row, column=col, padx=5, pady=5, sticky="ew", ipady=8)
+                stats_grid.grid_columnconfigure(col, weight=1)
+                
+                tk.Label(stat_box, text=label, bg="white", font=("Comic Sans MS", 10, "bold"), fg="#333").pack(anchor="w", padx=10, pady=(5, 2))
+                tk.Label(stat_box, text=value, bg="white", font=("Comic Sans MS", 12, "bold"), fg="#1095d6").pack(anchor="w", padx=10, pady=(0, 5))
 
             # Per-camp stats
             camps = stats_data.get("camps", [])
+            
+            if camps:
+                camps_title = tk.Label(scrollable_frame, text="📍 Camp Details",
+                                    bg="white", font=("Comic Sans MS", 14, "bold"), fg="#1095d6")
+                camps_title.pack(anchor="w", padx=15, pady=(20, 10))
+
             for camp in camps:
-                camp_frame = tk.LabelFrame(scrollable_frame, text=f"{camp['camp_name']} - {camp['location']}",
-                                          bg="lightblue", font=("Comic Sans MS", 11, "bold"))
-                camp_frame.pack(fill="x", padx=5, pady=5)
+                camp_frame = tk.Frame(scrollable_frame, bg="#F5F5F5", relief="raised", bd=1)
+                camp_frame.pack(fill="x", padx=10, pady=8, ipady=10)
+
+                # Camp name header
+                camp_header = tk.Frame(camp_frame, bg="#0D7FA8")
+                camp_header.pack(fill="x", padx=0, pady=0)
+                
+                tk.Label(camp_header, text=f"  {camp['camp_name']} • {camp['location']}",
+                        bg="#0D7FA8", font=("Comic Sans MS", 12, "bold"), fg="white").pack(anchor="w", pady=8)
+
+                # Camp info in grid (2 columns)
+                info_frame = tk.Frame(camp_frame, bg="#F5F5F5")
+                info_frame.pack(fill="x", padx=15, pady=10)
 
                 camp_info = [
-                    f"Duration: {camp['duration']}",
-                    f"Campers at Camp: {camp['campers_at_camp']}",
-                    f"Activities: {camp['activities']['total_filled']}/{camp['activities']['total_capacity']} slots ({camp['activities']['utilisation_rate']}%)",
-                    f"Daily Food: Supply {camp['food']['daily_supply']} | Demand {camp['food']['daily_demand']} | Surplus {camp['food']['daily_surplus']:+d}",
-                    f"Pay: ${camp['pay']}"
+                    (f"📅 Duration", camp['duration']),
+                    (f"👥 Campers", str(camp['campers_at_camp'])),
+                    (f"🎯 Activities", f"{camp['activities']['total_filled']}/{camp['activities']['total_capacity']} ({camp['activities']['utilisation_rate']}%)"),
+                    (f"🥘 Food", f"Supply: {camp['food']['daily_supply']} | Demand: {camp['food']['daily_demand']} | Surplus: {camp['food']['daily_surplus']:+d}"),
+                    (f"💰 Pay", f"${camp['pay']}"),
                 ]
 
-                for info in camp_info:
-                    tk.Label(camp_frame, text=info, bg="white", fg="black",
-                            font=("Comic Sans MS", 9)).pack(anchor="w", padx=10, pady=1)
+                for idx, (label, value) in enumerate(camp_info):
+                    info_box = tk.Frame(info_frame, bg="white", relief="flat", bd=0)
+                    info_box.pack(fill="x", pady=4, ipady=5)
+                    
+                    tk.Label(info_box, text=label, bg="white", font=("Comic Sans MS", 9, "bold"), fg="#666", width=20, anchor="w").pack(side="left", padx=5)
+                    tk.Label(info_box, text=value, bg="white", font=("Comic Sans MS", 9), fg="#333", anchor="w").pack(side="left", fill="x", expand=True, padx=5)
 
-                # Comments section
+                # Comments section (if exists)
                 if camp.get("additional_comments"):
-                    comments_label = tk.Label(camp_frame, text="Comments:", bg="white", fg="black",
-                                            font=("Comic Sans MS", 9, "bold"))
-                    comments_label.pack(anchor="w", padx=10, pady=(5, 2))
-
+                    comments_frame = tk.Frame(camp_frame, bg="#FFF9E6", relief="flat", bd=0)
+                    comments_frame.pack(fill="x", padx=15, pady=(10, 0), ipady=8)
+                    
+                    tk.Label(comments_frame, text="💬 Notes",
+                            bg="#FFF9E6", font=("Comic Sans MS", 9, "bold"), fg="#B8860B").pack(anchor="w", padx=5, pady=(3, 5))
+                    
                     for comment in camp["additional_comments"]:
-                        comment_text = f"• {comment['activity_name']}: {comment['comment']}"
-                        tk.Label(camp_frame, text=comment_text, bg="white", fg="black",
-                                font=("Comic Sans MS", 8), wraplength=300, justify="left").pack(anchor="w", padx=20, pady=1)
+                        tk.Label(comments_frame, text=f"• {comment}",
+                                bg="#FFF9E6", font=("Comic Sans MS", 8), fg="#666", wraplength=500, justify="left").pack(anchor="w", padx=15, pady=2)
 
         stats_btn = tk.Button(ntfsubframe, text="View Statistics",
                          command=open_statistics_window,

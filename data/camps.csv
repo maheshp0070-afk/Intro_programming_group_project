@@ -1,21 +1,21 @@
-name,location,type,start_date,end_date,food_supply_per_day,food_demand_per_day,scout_leader,pay
-firstcamp,Sonelgaz Aokas,overnight,16/11/2025,17/12/2025,18,6,leader2,10
-secondcamp,Sonelgaz Aokas,overnight,16/11/2025,17/02/2026,18,6,leader2,10
-thirdcamp,Sonelgaz Aokas,overnight,16/11/2025,17/12/2025,18,6,leader2,10
-fourthcamp,Sonelgaz Aokas,overnight,16/11/2025,30/12/2025,18,6,leader2,10
-fifthcamp,Akabli,expedition,17/11/2025,21/11/2025,56,7,unassigned,14
-sixthcamp,Akabli,expedition,17/11/2025,21/01/2026,56,7,leader1,14
-seventhcamp,Akabli,expedition,17/11/2025,21/10/2025,56,7,unassigned,14
-eightcamp,Tassili n'Ajjer,overnight,10/04/2005,11/04/2005,18,8,unassigned,68
-ninthcamp,Tassili n'Ajjer,overnight,10/04/2005,11/04/2005,18,8,unassigned,68
-tenthcamp,Timimoun,expedition,17/11/2025,05/02/2026,56,6,leader1,14
-eleventhcamp,Chréa National Park,overnight,17/11/2025,21/12/2025,45,8,leader1,36
-twelvecamp,Chréa National Park,overnight,17/11/2025,15/01/2026,45,8,leader1,36
-thirteenthcamp,Tindouf,expedition,17/11/2025,21/12/2025,34,6,leader1,35
-fourteenthcamp,Tindouf,expedition,17/11/2025,21/11/2025,34,6,unassigned,35
-fifteenthcamp,Tindouf,expedition,17/12/2025,12/02/2026,34,6,leader1,35
-sixteenthcamp,Hoggar mountains,overnight,17/12/2025,21/12/2025,45,5,unassigned,75
-seventeenthcamp,Hoggar mountains,overnight,17/12/2025,03/03/2026,45,5,leader1,75
-eighteenthcamp,Hoggar mountains,overnight,17/11/2025,21/09/2026,45,5,leader1,75
-nineteenthcamp,Hoggar mountains,overnight,17/10/2025,10/11/2025,45,5,unassigned,75
-twentiethcamp,Hassi Messaoud,expedition,17/11/2025,05/11/2025,67,8,unassigned,46
+name,location,type,start_date,end_date,food_supply_per_day,food_demand_per_day,scout_leader,pay,food_requirement_per_camper
+firstcamp,Sonelgaz Aokas,overnight,16/11/2025,17/12/2025,18,6,leader2,10,0.0
+secondcamp,Sonelgaz Aokas,overnight,16/11/2025,17/02/2026,18,6,leader2,10,0.0
+thirdcamp,Sonelgaz Aokas,overnight,16/11/2025,17/12/2025,18,6,leader2,10,0.0
+fourthcamp,Sonelgaz Aokas,overnight,16/11/2025,30/12/2025,18,6,leader2,10,0.0
+fifthcamp,Akabli,expedition,17/11/2025,21/11/2025,56,7,unassigned,14,0.0
+sixthcamp,Akabli,expedition,17/11/2025,21/01/2026,56,7,leader1,14,0.0
+seventhcamp,Akabli,expedition,17/11/2025,21/10/2025,56,7,unassigned,14,0.0
+eightcamp,Tassili n'Ajjer,overnight,10/04/2005,11/04/2005,18,8,unassigned,68,0.0
+ninthcamp,Tassili n'Ajjer,overnight,10/04/2005,11/04/2005,18,8,unassigned,68,0.0
+tenthcamp,Timimoun,expedition,17/11/2025,05/02/2026,56,6,leader1,14,0.0
+eleventhcamp,Chréa National Park,overnight,17/11/2025,21/12/2025,45,8,leader1,36,0.0
+twelvecamp,Chréa National Park,overnight,17/11/2025,15/01/2026,45,8,leader1,36,0.0
+thirteenthcamp,Tindouf,expedition,17/11/2025,21/12/2025,34,6,leader1,35,0.0
+fourteenthcamp,Tindouf,expedition,17/11/2025,21/11/2025,34,6,unassigned,35,0.0
+fifteenthcamp,Tindouf,expedition,17/12/2025,12/02/2026,34,6,leader1,35,0.0
+sixteenthcamp,Hoggar mountains,overnight,17/12/2025,21/12/2025,45,28,leader2,75,4.0
+seventeenthcamp,Hoggar mountains,overnight,17/12/2025,03/03/2026,45,5,leader1,75,0.0
+eighteenthcamp,Hoggar mountains,overnight,17/11/2025,21/09/2026,45,5,leader1,75,0.0
+nineteenthcamp,Hoggar mountains,overnight,17/10/2025,10/11/2025,45,5,unassigned,75,0.0
+twentiethcamp,Hassi Messaoud,expedition,17/11/2025,05/11/2025,67,8,unassigned,46,0.0
