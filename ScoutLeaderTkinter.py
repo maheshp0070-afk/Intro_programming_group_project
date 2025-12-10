@@ -227,21 +227,31 @@ def ScoutLeaderPage(leader_username):
     """Within a specific location (eg: "Timimoun") return the list of camps there 
     (leader-specific from camp_dict and unassigned camps)."""
     def camps_for_location(location):
-        # Remember camp_dict is global and contains the selected leader's camps
-        camps = [camp for camp in camp_dict.values() if camp.location == location]
+        camps = []
+        leader_username = selected_leader.username.strip().lower()
 
         try:
             with open(CAMPS_FILE, newline="", encoding="utf-8") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
+                    loc_value = str(row.get("location", "") or "").strip()
+                    if loc_value != location:
+                        continue
+
                     leader_value_raw = row.get("scout_leader", "")
                     leader_value = str(leader_value_raw or "").strip()
-                    if leader_value.lower() != "unassigned":
-                        continue  # already assigned to a leader (therefore not unassigned)
-                    if row.get("location") != location:
-                        continue # different location to requested
-                    if row.get("name") in camp_dict:
-                        continue # already in leader's camps
+                    leader_lower = leader_value.lower()
+
+                    include_row = False
+                    display_leader = leader_value
+
+                    if leader_lower in ("", "na", "unassigned"):
+                        include_row = True
+                        display_leader = "unassigned"
+                    elif leader_lower == leader_username:
+                        include_row = True
+                    else:
+                        continue
 
                     try:
                         start_dt = datetime.datetime.strptime(row["start_date"], "%d/%m/%Y")
@@ -251,13 +261,13 @@ def ScoutLeaderPage(leader_username):
 
                     camp_obj = SimpleNamespace(
                         name=row["name"],
-                        location=row["location"],
+                        location=loc_value,
                         type=row.get("type", ""),
                         start_date=start_dt,
                         end_date=end_dt,
                         food_supply_per_day=int(row.get("food_supply_per_day", 0) or 0),
                         food_demand_per_day=int(row.get("food_demand_per_day", 0) or 0),
-                        scout_leader=leader_value,
+                        scout_leader=display_leader,
                         pay=float(row.get("pay", 0) or 0),
                     )
                     camps.append(camp_obj)
@@ -265,7 +275,6 @@ def ScoutLeaderPage(leader_username):
             messagebox.showerror("Missing data", f"Could not find {CAMPS_FILE}.")
 
         return camps
-
 
     """Time status of a camp: planned, ongoing, completed."""
     def get_camp_status(camp, now=None):
