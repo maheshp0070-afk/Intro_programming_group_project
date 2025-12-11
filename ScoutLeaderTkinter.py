@@ -1367,76 +1367,76 @@ def ScoutLeaderPage(root,leader_username):
                                                 padx=15, pady=8)
                 remove_notes_button.grid(row=2, column=1, sticky="ew", padx=10, pady=(5, 10))
 
-            activity_label = tk.Label(makecampframe, text="Activities", bg="dodgerblue", font=("Comic Sans MS", 18))
+            activity_label = tk.Label(makecampframe, text="Activities", bg="dodgerblue", font=("Comic Sans MS", 12))
             activity_label.grid(row=1, column=0, columnspan=3, sticky="ew", padx=10, pady=(5, 10))
 
-            hiking_label = tk.Label(makecampframe, text="Hiking", bg="white", fg="black", font=("Comic Sans MS", 18))
+            hiking_label = tk.Label(makecampframe, text="Hiking", bg="white", fg="black", font=("Comic Sans MS", 12))
             hiking_label.grid(row=2, column=0, sticky="ew", padx=10, pady=(10, 5))
 
             view_hiking_camps = tk.Button(makecampframe, text="View Campers",
                                           command=lambda: open_activity_window("Hiking"), bg="white",
-                                          font=("Comic Sans MS", 18))
+                                          font=("Comic Sans MS", 10), padx=5, pady=3)
             view_hiking_camps.grid(row=2, column=1, sticky="ew", padx=10, pady=(10, 5))
 
             hiking_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Hiking"), bg="white",
-                                     font=("Comic Sans MS", 18))
+                                     font=("Comic Sans MS", 10), padx=5, pady=3)
             hiking_notes.grid(row=2, column=2, sticky="ew", padx=10, pady=(10, 5))
 
-            archery_label = tk.Label(makecampframe, text="Archery", bg="white", fg="black", font=("Comic Sans MS", 18))
+            archery_label = tk.Label(makecampframe, text="Archery", bg="white", fg="black", font=("Comic Sans MS", 12))
             archery_label.grid(row=3, column=0, sticky="ew", padx=10, pady=(5, 5))
 
             view_archery_camps = tk.Button(makecampframe, text="View Campers",
                                            command=lambda: open_activity_window("Archery"), bg="white",
-                                           font=("Comic Sans MS", 18))
+                                           font=("Comic Sans MS", 10), padx=5, pady=3)
             view_archery_camps.grid(row=3, column=1, sticky="ew", padx=10, pady=(5, 5))
 
             archery_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Archery"), bg="white",
-                                      font=("Comic Sans MS", 18))
+                                      font=("Comic Sans MS", 10), padx=5, pady=3)
             archery_notes.grid(row=3, column=2, sticky="ew", padx=10, pady=(5, 5))
 
-            campfire_label = tk.Label(makecampframe, text="Campfire", bg="white", fg="black", font=("Comic Sans MS", 18))
+            campfire_label = tk.Label(makecampframe, text="Campfire", bg="white", fg="black", font=("Comic Sans MS", 12))
             campfire_label.grid(row=4, column=0, sticky="ew", padx=10, pady=(5, 5))
 
             view_campfire_camps = tk.Button(makecampframe, text="View Campers",
                                             command=lambda: open_activity_window("Campfire"), bg="white",
-                                            font=("Comic Sans MS", 18))
+                                            font=("Comic Sans MS", 10), padx=5, pady=3)
             view_campfire_camps.grid(row=4, column=1, sticky="ew", padx=10, pady=(5, 5))
 
             campfire_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Campfire"), bg="white",
-                                       font=("Comic Sans MS", 18))
+                                       font=("Comic Sans MS", 10), padx=5, pady=3)
             campfire_notes.grid(row=4, column=2, sticky="ew", padx=10, pady=(5, 5))
 
             rock_climbing_label = tk.Label(makecampframe, text="Rock Climbing", bg="white", fg="black",
-                                           font=("Comic Sans MS", 18))
+                                           font=("Comic Sans MS", 10), padx=5, pady=3)
             rock_climbing_label.grid(row=5, column=0, sticky="ew", padx=10, pady=(5, 10))
 
             view_rock_climbing_camps = tk.Button(makecampframe, text="View Campers",
                                                  command=lambda: open_activity_window("Rock Climbing"), bg="white",
-                                                 font=("Comic Sans MS", 18))
+                                                 font=("Comic Sans MS", 10), padx=5, pady=3)
             view_rock_climbing_camps.grid(row=5, column=1, sticky="ew", padx=10, pady=(5, 10))
 
             rock_climbing_notes = tk.Button(makecampframe, text="Notes", command=lambda: open_extra_notes_window("Rock Climbing"), bg="white",
-                                            font=("Comic Sans MS", 18))
+                                            font=("Comic Sans MS", 10), padx=5, pady=3)
             rock_climbing_notes.grid(row=5, column=2, sticky="ew", padx=10, pady=(5, 10))
 
              # Campers section
-            campers_label = tk.Label(makecampframe, text="Campers", bg="dodgerblue", font=("Comic Sans MS", 18))
+            campers_label = tk.Label(makecampframe, text="Campers", bg="dodgerblue", font=("Comic Sans MS", 12))
             campers_label.grid(row=6, column=0, columnspan=3, sticky="ew", padx=10, pady=(5, 10))
 
-            add_campers_label = tk.Label(makecampframe, text="Add Campers", bg="white", fg="black", font=("Comic Sans MS", 18))
+            add_campers_label = tk.Label(makecampframe, text="Add Campers", bg="white", fg="black", font=("Comic Sans MS", 12))
             add_campers_label.grid(row=7, column=0, sticky="ew", padx=10, pady=(10, 5))
 
             add_campers_button = tk.Button(makecampframe, text="Add to Camp",
                                            command=open_add_campers_window, bg="white",
-                                           font=("Comic Sans MS", 18))
+                                           font=("Comic Sans MS", 10), padx=5, pady=3)
             add_campers_button.grid(row=7, column=1, columnspan=2, sticky="ew", padx=10, pady=(10, 5))
 
-            remove_campers_label = tk.Label(makecampframe, text="Remove Campers", bg="white", fg="black", font=("Comic Sans MS", 18))
+            remove_campers_label = tk.Label(makecampframe, text="Remove Campers", bg="white", fg="black", font=("Comic Sans MS", 12))
             remove_campers_label.grid(row=8, column=0, sticky="ew", padx=10, pady=(5, 10))
 
             remove_campers_button = tk.Button(makecampframe, text="View and Remove Campers",
                                               command=open_remove_campers_window, bg="white",
-                                              font=("Comic Sans MS", 18))
+                                              font=("Comic Sans MS", 10), padx=5, pady=3)
             remove_campers_button.grid(row=8, column=1, columnspan=2, sticky="ew", padx=10, pady=(5, 10))
 
         # Generating tent icons on the map based on leader's camps

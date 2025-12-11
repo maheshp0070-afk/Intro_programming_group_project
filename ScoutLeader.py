@@ -135,7 +135,7 @@ class ScoutLeader(User):
             }
 
     def assign_camper(self, camper_id, camp):
-        """Assigns camper to a given camp. Returns status message."""
+        """Assigns camper to a given camp. Returns status message. Hard limit: 50 campers per camp."""
         df_camp = pd.read_csv("data/camps.csv", index_col="name")
         df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
         
@@ -153,6 +153,18 @@ class ScoutLeader(User):
                 "message": f"Camper {camper_id} is already assigned to {current_camp}",
                 "camper_id": camper_id,
                 "camp": current_camp
+            }
+        
+        # Check camp capacity (hard max of 50 campers)
+        campers_in_camp = len(df_campers[df_campers['camps'] == camp])
+        if campers_in_camp >= 50:
+            return {
+                "success": False,
+                "message": f"Camp {camp} has reached maximum capacity (50 campers)",
+                "camper_id": camper_id,
+                "camp": camp,
+                "current_capacity": campers_in_camp,
+                "max_capacity": 50
             }
         
         df_campers.loc[camper_id, "camps"] = camp
