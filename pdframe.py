@@ -4,16 +4,16 @@ import datetime
 
 class Camp:
 
-    def __init__(self, name, location, type, start_date, end_date, food_supply_per_day, food_demand_per_day, scout_leader,
+    def __init__(self, name, location, camp_type, start_date, end_date, food_supply_per_day, food_demand_per_day, leader,
                  pay):
         self.name = name
         self.location = location
-        self.type = type
+        self.camp_type = camp_type
         self.start_date = start_date
         self.end_date = end_date
         self.food_supply_per_day = food_supply_per_day
         self.food_demand_per_day = food_demand_per_day
-        self.scout_leader = scout_leader
+        self.leader = leader
         self.pay = pay
 
     @classmethod
@@ -25,12 +25,12 @@ class Camp:
             camp = Camp(
                 name=row['name'],
                 location=row['location'],
-                type=row['type'],
+                camp_type=row['camp_type'],
                 start_date=datetime.datetime.strptime(row['start_date'], '%d/%m/%Y'),
                 end_date=datetime.datetime.strptime(row['end_date'], '%d/%m/%Y'),
                 food_supply_per_day=(row['food_supply_per_day']),
                 food_demand_per_day=(row['food_demand_per_day']),
-                scout_leader=row['scout_leader'],
+                leader=row['leader'],
                 pay=round(float(row['pay']), 2)
             )
 
@@ -80,13 +80,13 @@ class User:
             camps = [camp for camp in camps_dict if camp.leader == self.username]
             return camps
 
-    def create_camp(self, camps_dict, name, location, type, start_date, end_date, food_supply_per_day, leader, pay):
+    def create_camp(self, camps_dict, name, location, camp_type, start_date, end_date, food_supply_per_day, leader, pay):
 
         if self.role == "coordinator":
             new_camp = Camp(
                 name=name,
                 location=location,
-                type=type,
+                camp_type=camp_type,
                 start_date=datetime.datetime.strptime(start_date, '%d-%m-%Y'),  # needs changing depending on tkinter
                 end_date=datetime.datetime.strptime(end_date, '%d-%m-%Y'),
                 food_supply_per_day=int(food_supply_per_day),

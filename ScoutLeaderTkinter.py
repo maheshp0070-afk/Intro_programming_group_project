@@ -169,12 +169,12 @@ def ScoutLeaderPage(root,leader_username):
                         updated_rows.append(row)
                         continue
 
-                    leader_text = str(row.get("scout_leader", "") or "").strip()
+                    leader_text = str(row.get("leader", "") or "").strip()
                     leader_lower = leader_text.lower()
 
                     if leader_lower in ("", "na"):
                         if leader_lower != "unassigned":
-                            row["scout_leader"] = "unassigned"
+                            row["leader"] = "unassigned"
                             changed = True
                         updated_rows.append(row)
                         continue
@@ -184,7 +184,7 @@ def ScoutLeaderPage(root,leader_username):
                         continue
 
                     if end_dt + datetime.timedelta(days=1) < now:
-                        row["scout_leader"] = "unassigned"
+                        row["leader"] = "unassigned"
                         changed = True
 
                     updated_rows.append(row)
@@ -217,7 +217,7 @@ def ScoutLeaderPage(root,leader_username):
             with open(CAMPS_FILE, newline="", encoding="utf-8") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
-                    leader_value = str(row.get("scout_leader", "") or "").strip().lower()
+                    leader_value = str(row.get("leader", "") or "").strip().lower()
                     if leader_value != "unassigned":
                         continue
                     # Extract the "location" column value for that row with an empty("or NA") leader
@@ -243,7 +243,7 @@ def ScoutLeaderPage(root,leader_username):
                     if loc_value != location:
                         continue
 
-                    leader_value_raw = row.get("scout_leader", "")
+                    leader_value_raw = row.get("leader", "")
                     leader_value = str(leader_value_raw or "").strip()
                     leader_lower = leader_value.lower()
 
@@ -267,12 +267,12 @@ def ScoutLeaderPage(root,leader_username):
                     camp_obj = SimpleNamespace(
                         name=row["name"],
                         location=loc_value,
-                        type=row.get("type", ""),
+                        camp_type=row.get("camp_type", ""),
                         start_date=start_dt,
                         end_date=end_dt,
                         food_supply_per_day=int(row.get("food_supply_per_day", 0) or 0),
                         food_demand_per_day=int(row.get("food_demand_per_day", 0) or 0),
-                        scout_leader=display_leader,
+                        leader=display_leader,
                         pay=float(row.get("pay", 0) or 0),
                     )
                     camps.append(camp_obj)
@@ -296,11 +296,11 @@ def ScoutLeaderPage(root,leader_username):
         return "ongoing" # camp is currently ongoing
 
 
-    """Check if a camp is unassigned (no scout leader), extracts from the "scout_leader" attribute of 
+    """Check if a camp is unassigned (no scout leader), extracts from the "leader" attribute of 
     the camp object created in camps_for_location(), meaning this function is used upon clicking on 
-    individual camps (the treeview knows which camp is unsupervised from camps_for_location() - CSV "scout_leader" lookup)."""
+    individual camps (the treeview knows which camp is unsupervised from camps_for_location() - CSV "leader" lookup)."""
     def is_unassigned(camp):
-        leader_value = getattr(camp, "scout_leader", "")
+        leader_value = getattr(camp, "leader", "")
         if leader_value is None:
             return False
         return str(leader_value).strip().lower() == "unassigned"

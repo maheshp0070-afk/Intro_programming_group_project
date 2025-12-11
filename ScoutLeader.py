@@ -83,31 +83,31 @@ class ScoutLeader(User):
         if camp_name not in df.index:
             raise ValueError(f"Camp {camp_name} does not exist")
 
-        current_text = df.loc[camp_name, "scout_leader"]
+        current_text = df.loc[camp_name, "leader"]
         # treat NaN, empty string, or literal "Na" as unassigned
 
         if pd.isna(current_text) or str(current_text).strip() in ("", "Na", "unassigned"):
-            df.loc[camp_name, "scout_leader"] = self.username
+            df.loc[camp_name, "leader"] = self.username
             df.to_csv("data/camps.csv", index=True)
             return {
                 "success": True,
                 "message": f"{self.username} assigned to {camp_name}",
                 "camp_name": camp_name,
-                "scout_leader": self.username
+                "leader": self.username
             }
         elif current_text == self.username:
             return {
                 "success": False,
                 "message": f"{self.username} is already assigned to this camp!",
                 "camp_name": camp_name,
-                "scout_leader": current_text
+                "leader": current_text
             }
         else:
             return {
                 "success": False,
                 "message": f"Camp {camp_name} is already assigned to {current_text}",
                 "camp_name": camp_name,
-                "scout_leader": current_text
+                "leader": current_text
             }
 
     def deselect_camp(self, camp_name):
@@ -117,21 +117,21 @@ class ScoutLeader(User):
         if camp_name not in df.index:
             raise ValueError(f"Camp {camp_name} does not exist")
 
-        if df.loc[camp_name, "scout_leader"] == self.username:
-            df.loc[camp_name, "scout_leader"] = "unassigned"
+        if df.loc[camp_name, "leader"] == self.username:
+            df.loc[camp_name, "leader"] = "unassigned"
             df.to_csv("data/camps.csv", index=True)
             return {
                 "success": True,
                 "message": f"{self.username} has deselected {camp_name}",
                 "camp_name": camp_name,
-                "scout_leader": "unassigned"
+                "leader": "unassigned"
             }
         else:
             return {
                 "success": False,
                 "message": f"{self.username} does not supervise {camp_name}",
                 "camp_name": camp_name,
-                "scout_leader": df.loc[camp_name, "scout_leader"]
+                "leader": df.loc[camp_name, "leader"]
             }
 
     def assign_camper(self, camper_id, camp):
@@ -210,7 +210,7 @@ class ScoutLeader(User):
 
         camp_name = df_activities.loc[activity_id, "camp_name"]
         df_camps = pd.read_csv("data/camps.csv", index_col="name")
-        if str(df_camps.loc[camp_name, "scout_leader"]).strip() != self.username:
+        if str(df_camps.loc[camp_name, "leader"]).strip() != self.username:
             raise PermissionError(f"You do not supervise camp {camp_name}")
 
         current_assigned = df_activities.loc[activity_id, "assigned_campers"]
@@ -290,7 +290,7 @@ class ScoutLeader(User):
 
         camp_name = df_activities.loc[activity_id, "camp_name"]
         df_camps = pd.read_csv("data/camps.csv", index_col="name")
-        if df_camps.loc[camp_name, "scout_leader"] != self.username:
+        if df_camps.loc[camp_name, "leader"] != self.username:
             raise PermissionError(f"{self.username} does not supervise {camp_name}")
 
         current_assigned = df_activities.loc[activity_id, "assigned_campers"]
@@ -359,7 +359,7 @@ class ScoutLeader(User):
         if camp_name not in df_camps.index:
             raise ValueError(f"Camp {camp_name} does not exist")
         
-        if str(df_camps.loc[camp_name, "scout_leader"]).strip() != self.username:
+        if str(df_camps.loc[camp_name, "leader"]).strip() != self.username:
             raise PermissionError(f"{self.username} does not supervise {camp_name}")
 
         camp_activities = df_activities[df_activities["camp_name"] == camp_name].copy()
@@ -540,16 +540,16 @@ class ScoutLeader(User):
         camps = {}
 
         for index, row in df_camps.iterrows():
-            if row["scout_leader"] == self.username:
+            if row["leader"] == self.username:
                 camp = Camp(
                     name=row['name'],
                     location=row['location'],
-                    type=row['type'],
+                    camp_type=row['camp_type'],
                     start_date=datetime.datetime.strptime(row['start_date'], '%d/%m/%Y'),
                     end_date=datetime.datetime.strptime(row['end_date'], '%d/%m/%Y'),
                     food_supply_per_day=int(row['food_supply_per_day']),
                     food_demand_per_day=int(row['food_demand_per_day']),
-                    scout_leader=row['scout_leader'],
+                    leader=row['leader'],
                     pay=round(float(row['pay']), 2)
                 )
 
@@ -571,7 +571,7 @@ class ScoutLeader(User):
         df_activities = pd.read_csv("data/activities.csv", index_col="activity_id", dtype={"assigned_campers": str})
 
         """Get all camps for this leader"""
-        leader_camps = df_camps[df_camps["scout_leader"].str.strip() == self.username]
+        leader_camps = df_camps[df_camps["leader"].str.strip() == self.username]
 
         if leader_camps.empty:
             return {
@@ -639,7 +639,7 @@ class ScoutLeader(User):
             camp_stats.append({
                 "camp_name": camp_name,
                 "location": camp_data["location"],
-                "camp_type": camp_data["type"],
+                "camp_type": camp_data["camp_type"],
                 "duration": f"{camp_data['start_date']} to {camp_data['end_date']}",
                 "campers_at_camp": int(total_campers),
                 "activities": {
