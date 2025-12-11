@@ -15,9 +15,9 @@ class LoginPage(tk.Frame):
         self.canvas_bg = self.canvas.create_image(0, 0, image=self.bg, anchor="nw")
 
         #Username and Password
-        title_label = tk.Label(self, text = "CampTrack Login Page", font = ("Comic Sans MS", 20), bg= "white")
-        u_label = tk.Label(self.canvas, text = "Enter your login: ", font = ("Comic Sans MS", 20), bg= "white")
-        p_label = tk.Label(self.canvas, text="Enter your password: ", font = ("Comic Sans MS", 20), bg= "white")
+        title_label = tk.Label(self, text = "CampTrack Login Page", font = ("Comic Sans MS", 20), bg= "white", fg = "black")
+        u_label = tk.Label(self.canvas, text = "Enter your login: ", font = ("Comic Sans MS", 20), bg= "white", fg = "black")
+        p_label = tk.Label(self.canvas, text="Enter your password: ", font = ("Comic Sans MS", 20), bg= "white", fg = "black")
         login_button = ttk.Button(self.canvas, text="Login", command=self.login_)
 
         self.login = ttk.Entry(self.canvas, width=40, font = ("Comic Sans MS", 20), validate="key", validatecommand = (self.register(lambda x: len(x)<20), '%P'))
@@ -59,8 +59,10 @@ class LoginPage(tk.Frame):
                 show_log_coord(root)
                 
             if role == "leader":
-                logging.info(f"{self.username} Logged In")
-                pass
+                logging.info(f"{username} Logged In")
+                root.withdraw()
+                from ScoutLeaderTkinter import ScoutLeaderPage
+                ScoutLeaderPage(root, username)
         elif status == False:
             messagebox.showerror("Error", "User is disabled.")
 
