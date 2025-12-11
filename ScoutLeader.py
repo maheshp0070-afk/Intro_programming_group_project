@@ -472,10 +472,22 @@ class ScoutLeader(User):
             raise ValueError(f"Activity {activity} does not exist")
         
         cell = df_activities.loc[activity, "extra_notes"]
-        if pd.isna(cell):
+        
+        # Handle case where cell might be a Series
+        if isinstance(cell, pd.Series):
+            cell = cell.iloc[0] if not cell.empty else ""
+        
+        # Convert to string and handle NaN/nan values
+        cell = str(cell).strip()
+        if cell.lower() == "nan" or cell == "":
             cell = ""
         
-        cell = cell + " " + notes
+        # Use pipe delimiter to separate individual notes
+        if cell:
+            cell = cell + "|" + notes
+        else:
+            cell = notes
+        
         df_activities.loc[activity, "extra_notes"] = cell
         df_activities.to_csv("data/activities.csv", index=True)
         
@@ -494,30 +506,33 @@ class ScoutLeader(User):
             raise ValueError(f"Activity {activity} does not exist")
         
         cell = df_activities.loc[activity, "extra_notes"]
-        if pd.isna(cell):
+        
+        # Handle case where cell might be a Series
+        if isinstance(cell, pd.Series):
+            cell = cell.iloc[0] if not cell.empty else ""
+        
+        # Convert to string and handle NaN/nan values
+        cell = str(cell).strip()
+        if cell.lower() == "nan" or cell == "":
             cell = ""
         
-        if cell.find(notes) == -1:
+        # Use pipe delimiter to separate individual notes
+        notes_list = [n.strip() for n in cell.split("|") if n.strip()]
+        
+        if notes not in notes_list:
             return False
-             #   { "success": False,
-             #   "message": f"'{notes}' was not found in activity {activity} notes",
-             #   "activity_id": activity,
-             #   "notes": cell
-            #}
-        else:
-            cell = cell.replace(notes, "")
-            while "  " in cell:
-                cell = cell.replace("  ", " ")
-            if cell.strip() == "":
-                cell = ""
-            df_activities.loc[activity, "extra_notes"] = cell
-            df_activities.to_csv("data/activities.csv", index=True)
-            return {
-                "success": True,
-                "message": f"'{notes}' removed from activity {activity} notes",
-                "activity_id": activity,
-                "notes": cell
-            }
+        
+        notes_list.remove(notes)
+        cell = "|".join(notes_list)
+        df_activities.loc[activity, "extra_notes"] = cell
+        df_activities.to_csv("data/activities.csv", index=True)
+        
+        return {
+            "success": True,
+            "message": f"'{notes}' removed from activity {activity} notes",
+            "activity_id": activity,
+            "notes": cell
+        }
 
     def load_camps_for_leader(self, file):
         df_camps = pd.read_csv(file)
