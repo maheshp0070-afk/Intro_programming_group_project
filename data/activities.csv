@@ -1,5 +1,5 @@
 activity_id,camp_name,activity_name,start_time,end_time,max_capacity,assigned_campers,extra_notes
-1,firstcamp,Hiking,09:00,12:00,20,,
+1,firstcamp,Hiking,09:00,12:00,20,"2,4,5,6,8,9,11",
 2,firstcamp,Archery,14:00,16:00,20,,
 3,firstcamp,Campfire,19:00,21:00,20,,
 4,firstcamp,Rock Climbing,08:00,17:00,20,,

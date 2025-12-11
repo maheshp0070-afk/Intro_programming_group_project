@@ -210,7 +210,7 @@ class ScoutLeader(User):
 
         camp_name = df_activities.loc[activity_id, "camp_name"]
         df_camps = pd.read_csv("data/camps.csv", index_col="name")
-        if df_camps.loc[camp_name, "scout_leader"] != self.username:
+        if str(df_camps.loc[camp_name, "scout_leader"]).strip() != self.username:
             raise PermissionError(f"You do not supervise camp {camp_name}")
 
         current_assigned = df_activities.loc[activity_id, "assigned_campers"]
@@ -359,7 +359,7 @@ class ScoutLeader(User):
         if camp_name not in df_camps.index:
             raise ValueError(f"Camp {camp_name} does not exist")
         
-        if df_camps.loc[camp_name, "scout_leader"] != self.username:
+        if str(df_camps.loc[camp_name, "scout_leader"]).strip() != self.username:
             raise PermissionError(f"{self.username} does not supervise {camp_name}")
 
         camp_activities = df_activities[df_activities["camp_name"] == camp_name].copy()
@@ -472,7 +472,7 @@ class ScoutLeader(User):
             raise ValueError(f"Activity {activity} does not exist")
         
         cell = df_activities.loc[activity, "extra_notes"]
-        
+
         # Handle case where cell might be a Series
         if isinstance(cell, pd.Series):
             cell = cell.iloc[0] if not cell.empty else ""
@@ -506,7 +506,7 @@ class ScoutLeader(User):
             raise ValueError(f"Activity {activity} does not exist")
         
         cell = df_activities.loc[activity, "extra_notes"]
-        
+
         # Handle case where cell might be a Series
         if isinstance(cell, pd.Series):
             cell = cell.iloc[0] if not cell.empty else ""
@@ -533,6 +533,7 @@ class ScoutLeader(User):
             "activity_id": activity,
             "notes": cell
         }
+
 
     def load_camps_for_leader(self, file):
         df_camps = pd.read_csv(file)
@@ -570,7 +571,7 @@ class ScoutLeader(User):
         df_activities = pd.read_csv("data/activities.csv", index_col="activity_id", dtype={"assigned_campers": str})
 
         """Get all camps for this leader"""
-        leader_camps = df_camps[df_camps["scout_leader"] == self.username]
+        leader_camps = df_camps[df_camps["scout_leader"].str.strip() == self.username]
 
         if leader_camps.empty:
             return {

@@ -9,7 +9,8 @@ import datetime
 from types import SimpleNamespace
 from ScoutLeader import ScoutLeader
 import pandas as pd
-
+import sys, os
+sys.stderr = open(os.devnull, 'w')  
 
 
 def ScoutLeaderPage(root,leader_username):
@@ -322,7 +323,7 @@ def ScoutLeaderPage(root,leader_username):
         global map_window
         map_window = canvas.create_window(960, 400, window=mapsubframe)
         global mapsubcanvas
-        mapsubcanvas = tk.Canvas(mapsubframe, width='500', height='500', bg='white')
+        mapsubcanvas = tk.Canvas(mapsubframe, width='496', height='496', bg='light goldenrod')
 
         mapsubcanvas.pack()
         mapsubcanvas.create_image(250, 250, image=algeria_map)
@@ -371,10 +372,10 @@ def ScoutLeaderPage(root,leader_username):
 
         """ CAMP Treeview FRAME: Placing a camp_treeview frame on the Message Board, then placing a 
         treeview widget inside the frame to display all camps at that location """
-        camps_treeview_subframe = tk.Frame(canvas, width=500, height=300, bg="white")
+        camps_treeview_subframe = tk.Frame(canvas, width=500, height=300, bg="light goldenrod")
         camps_treeview_window = canvas.create_window(320,525, window = camps_treeview_subframe, width=500, height=300)
         # Label for the camp treeview
-        camps_listtitle = tk.Label(camps_treeview_subframe, text="Camps at this location:", font=("Comic Sans MS", 12), bg="white", fg="black")
+        camps_listtitle = tk.Label(camps_treeview_subframe, text="Camps at this location:", font=("Comic Sans MS", 12), bg="light goldenrod", fg="black")
         camps_listtitle.pack()
         # Creating the treeview widget itself
         camps_treeview = ttk.Treeview(camps_treeview_subframe, columns=("Camp Name", "Status"), show="headings")
@@ -440,7 +441,14 @@ def ScoutLeaderPage(root,leader_username):
                                     if food_req < 0:
                                         messagebox.showerror("Invalid input", "Food requirement must be non-negative")
                                         return
+                                    elif food_req > 5:
+                                        messagebox.showerror("Invalid input", "Food requirement must be 5 or less")
+                                        return
+                                    elif food_req != int(food_req):
+                                        messagebox.showerror("Invalid input", "Food requirement must be a whole number")
+                                        return
                                     
+                                    food_req = int(food_req)
                                     food_result = selected_leader.set_food_requirement_per_camper(camp_name, food_req)
                                     if food_result.get("success"):
                                         messagebox.showinfo("Success", 
@@ -517,7 +525,7 @@ def ScoutLeaderPage(root,leader_username):
 
 
         """ INDIVIDUAL CAMP & ITS ACTIVITIES FRAME AND WINDOW: triggers upon clicking and entering a camp on camp treeview """
-        createcampframe = tk.Frame(canvas, background="lightblue")
+        createcampframe = tk.Frame(canvas, background="light goldenrod")
         createcampframe.grid_columnconfigure(0, weight=1)
         createcampframe.grid_columnconfigure(1, weight=1)
         createcampframe.grid_columnconfigure(2, weight=1)
@@ -1457,7 +1465,7 @@ def ScoutLeaderPage(root,leader_username):
         MESSAGE FRAME: Placing a frame on the Message Board, then placing the messaging app inside the frame
         """
         global msgsubframe
-        msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white")
+        msgsubframe = tk.Frame(canvas, width=500, height=300, bg="light goldenrod")
         global msg_window
         msg_window = canvas.create_window(320,525, window = msgsubframe)
         try:
@@ -1492,7 +1500,7 @@ def ScoutLeaderPage(root,leader_username):
 
         """Button Frame/window + Button Creation"""
         global ntfsubframe
-        ntfsubframe = tk.Frame(canvas, width=520, height=140, bg="lightblue")
+        ntfsubframe = tk.Frame(canvas, width=520, height=140, bg="light goldenrod")
         ntfsubframe.grid_columnconfigure(0, weight=1)
         ntfsubframe.grid_columnconfigure(1, weight=1)
         ntfsubframe.grid_rowconfigure(0, weight=1)
@@ -1583,7 +1591,7 @@ def ScoutLeaderPage(root,leader_username):
                 (f"👥 Total Campers", str(overall.get('total_campers', 0))),
                 (f"🎯 Total Activities", str(overall.get('total_activities', 0))),
                 (f"📊 Activity Usage", f"{overall.get('activity_utilisation_rate', 0)}%"),
-                (f"💰 Total Pay", f"${overall.get('total_pay', 0)}"),
+                (f"💰 Total Pay", f"{overall.get('total_pay', 0)} دج"),
                 (f"🥘 Food Surplus", f"{overall.get('food_surplus', 0)} units"),
             ]
 
@@ -1596,7 +1604,7 @@ def ScoutLeaderPage(root,leader_username):
                 stats_grid.grid_columnconfigure(col, weight=1)
                 
                 tk.Label(stat_box, text=label, bg="white", font=("Comic Sans MS", 10, "bold"), fg="black").pack(anchor="w", padx=10, pady=(5, 2))
-                tk.Label(stat_box, text=value, bg="white", font=("Comic Sans MS", 12, "bold"), fg="#black").pack(anchor="w", padx=10, pady=(0, 5))
+                tk.Label(stat_box, text=value, bg="white", font=("Comic Sans MS", 12, "bold"), fg="black").pack(anchor="w", padx=10, pady=(0, 5))
 
             # Per-camp stats
             camps = stats_data.get("camps", [])
@@ -1626,7 +1634,7 @@ def ScoutLeaderPage(root,leader_username):
                     (f"👥 Campers", str(camp['campers_at_camp'])),
                     (f"🎯 Activities", f"{camp['activities']['total_filled']}/{camp['activities']['total_capacity']} ({camp['activities']['utilisation_rate']}%)"),
                     (f"🥘 Food", f"Supply: {camp['food']['daily_supply']} | Demand: {camp['food']['daily_demand']} | Surplus: {camp['food']['daily_surplus']:+d}"),
-                    (f"💰 Pay", f"${camp['pay']}"),
+                    (f"💰 Pay", f"{camp['pay']} دج"),
                 ]
 
                 for idx, (label, value) in enumerate(camp_info):
