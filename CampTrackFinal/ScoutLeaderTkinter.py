@@ -121,19 +121,26 @@ def ScoutLeaderPage(root,leader_username):
     """
     Saving Globally-used images and variables in memory
     """
-    algeria_map = tk.PhotoImage(file="map.png")
+    window.algeria_map = tk.PhotoImage(file="map.png")
+    algeria_map = window.algeria_map
 
-    photoimagetent = tk.PhotoImage(file="Tent-icon.png")
+    window.photoimagetent = tk.PhotoImage(file="Tent-icon.png")
+    photoimagetent = window.photoimagetent
 
-    photoimagetent_highlighted = tk.PhotoImage(file="Highlighted-Tent-icon.png")
+    window.photoimagetent_highlighted = tk.PhotoImage(file="Highlighted-Tent-icon.png")
+    photoimagetent_highlighted = window.photoimagetent_highlighted
 
-    photoimageavailable = tk.PhotoImage(file="green.png")
+    window.photoimageavailable = tk.PhotoImage(file="green.png")
+    photoimageavailable = window.photoimageavailable
 
-    photoimageavailable_highlighted = tk.PhotoImage(file="Highlighted-green.png")
+    window.photoimageavailable_highlighted = tk.PhotoImage(file="Highlighted-green.png")
+    photoimageavailable_highlighted = window.photoimageavailable_highlighted
 
-    photoimageplanned = tk.PhotoImage(file="amber.png")
+    window.photoimageplanned = tk.PhotoImage(file="amber.png")
+    photoimageplanned = window.photoimageplanned
 
-    photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
+    window.photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
+    photoimageplanned_highlighted = window.photoimageplanned_highlighted
 
     tent_icons = {}
 
