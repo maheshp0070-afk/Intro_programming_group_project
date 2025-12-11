@@ -5,6 +5,9 @@ import datetime
 
 
 class ScoutLeader(User):
+    pd_camps = Camp.load_camps("data/camps.csv")
+    pd_users = User.load_users("data/users.csv")
+
     def __init__(self, username, password, status="status"):
         super().__init__(username, password, role="leader", status=status)
 
@@ -211,7 +214,7 @@ class ScoutLeader(User):
             raise PermissionError(f"You do not supervise camp {camp_name}")
 
         current_assigned = df_activities.loc[activity_id, "assigned_campers"]
-        current_camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",")] if pd.notna(
+        current_camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",") if c.strip()] if pd.notna(
             current_assigned) and str(current_assigned).strip() else []
 
         # Check for duplicates
@@ -264,7 +267,7 @@ class ScoutLeader(User):
             if pd.isna(current_activities) or str(current_activities).strip() == "":
                 df_campers.loc[camper_id, "activities"] = str(activity_id)
             else:
-                df_campers.loc[camper_id, "activities"] = str(int(float(current_activities))) + f",{activity_id}"
+                df_campers.loc[camper_id, "activities"] = str(((current_activities))) + f",{activity_id}"
 
         df_campers.to_csv("data/campers.csv", index=True)
         
@@ -300,7 +303,7 @@ class ScoutLeader(User):
                 "not_assigned": camper_ids
             }
 
-        camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",")]
+        camper_list = [int(float(c.strip())) for c in str(current_assigned).split(",") if c.strip()]
         removed_campers = []
         not_assigned_campers = []
 
@@ -394,31 +397,72 @@ class ScoutLeader(User):
             "activities": schedule
         }
 
-    def assign_food_to_camper(self, camper_id, food_number):
-        """Assigns food to camper. Returns status message."""
-        df_campers = pd.read_csv("data/campers.csv", index_col="camper_id", dtype={"food": "Int64"})
+    def set_food_requirement_per_camper(self, camp_name, requirement_per_camper):
+        """Sets food demand based on per-camper requirement"""
+        df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
+        df_camps = pd.read_csv("data/camps.csv", index_col="name")
         
-        if camper_id not in df_campers.index:
-            raise ValueError(f"Camper {camper_id} does not exist")
+        if camp_name not in df_camps.index:
+            raise ValueError(f"Camp {camp_name} does not exist")
         
-        current_food = df_campers.loc[camper_id, "food"]
+        # Count campers in this camp
+        campers_in_camp = len(df_campers[df_campers['camps'] == camp_name])
         
-        if pd.isna(current_food) or current_food != food_number:
-            df_campers.loc[camper_id, "food"] = food_number
-            df_campers.to_csv("data/campers.csv", index=True)
-            return {
-                "success": True,
-                "message": f"Camper {camper_id} assigned {food_number} units of food",
-                "camper_id": camper_id,
-                "food_assigned": food_number
-            }
-        else:
+        # Calculate total demand
+        food_demand = requirement_per_camper * campers_in_camp
+        
+        # Store both the per-camper requirement and the calculated demand
+        if "food_requirement_per_camper" not in df_camps.columns:
+            df_camps["food_requirement_per_camper"] = 0.0
+        
+        df_camps.loc[camp_name, "food_requirement_per_camper"] = requirement_per_camper
+        df_camps.loc[camp_name, "food_demand_per_day"] = food_demand
+        df_camps.to_csv("data/camps.csv", index=True)
+    
+        return {
+            "success": True,
+            "camp_name": camp_name,
+            "requirement_per_camper": requirement_per_camper,
+            "total_campers": campers_in_camp,
+            "food_demand": food_demand
+        }
+
+    def recalculate_food_demand(self, camp_name):
+        """Recalculates food demand based on current camper count and stored requirement per camper"""
+        df_campers = pd.read_csv("data/campers.csv", index_col="camper_id")
+        df_camps = pd.read_csv("data/camps.csv", index_col="name")
+    
+        if camp_name not in df_camps.index:
+            raise ValueError(f"Camp {camp_name} does not exist")
+        
+        # Get the stored requirement per camper
+        requirement_per_camper = df_camps.loc[camp_name, "food_requirement_per_camper"]
+        
+        # If no requirement set yet, do nothing
+        if pd.isna(requirement_per_camper) or requirement_per_camper == 0:
             return {
                 "success": False,
-                "message": f"Camper {camper_id} already assigned {food_number} units of food",
-                "camper_id": camper_id,
-                "food_assigned": food_number
+                "message": "Food requirement per camper not set",
+                "camp_name": camp_name
             }
+        
+        # Count current campers in this camp
+        campers_in_camp = len(df_campers[df_campers['camps'] == camp_name])
+        
+        # Calculate new demand
+        food_demand = requirement_per_camper * campers_in_camp
+        
+        # Update the demand
+        df_camps.loc[camp_name, "food_demand_per_day"] = food_demand
+        df_camps.to_csv("data/camps.csv", index=True)
+        
+        return {
+            "success": True,
+            "camp_name": camp_name,
+            "requirement_per_camper": requirement_per_camper,
+            "total_campers": campers_in_camp,
+            "food_demand": food_demand
+        }
 
     def add_activity_outcomes(self, activity, notes):
         """Allows leader to add activity outcomes, incidents, or special achievements. Returns status message."""
@@ -428,10 +472,22 @@ class ScoutLeader(User):
             raise ValueError(f"Activity {activity} does not exist")
         
         cell = df_activities.loc[activity, "extra_notes"]
-        if pd.isna(cell):
+        
+        # Handle case where cell might be a Series
+        if isinstance(cell, pd.Series):
+            cell = cell.iloc[0] if not cell.empty else ""
+        
+        # Convert to string and handle NaN/nan values
+        cell = str(cell).strip()
+        if cell.lower() == "nan" or cell == "":
             cell = ""
         
-        cell = cell + " " + notes
+        # Use pipe delimiter to separate individual notes
+        if cell:
+            cell = cell + "|" + notes
+        else:
+            cell = notes
+        
         df_activities.loc[activity, "extra_notes"] = cell
         df_activities.to_csv("data/activities.csv", index=True)
         
@@ -443,36 +499,40 @@ class ScoutLeader(User):
         }
 
     def remove_activity_outcomes(self, activity, notes):
-        """Allows leader to remove activity outcomes"""
+        """Allows leader to remove activity outcomes. Returns status message."""
         df_activities = pd.read_csv("data/activities.csv", index_col="activity_id", dtype={"extra_notes": str})
-
+        
         if activity not in df_activities.index:
             raise ValueError(f"Activity {activity} does not exist")
-
+        
         cell = df_activities.loc[activity, "extra_notes"]
-        if pd.isna(cell):
+        
+        # Handle case where cell might be a Series
+        if isinstance(cell, pd.Series):
+            cell = cell.iloc[0] if not cell.empty else ""
+        
+        # Convert to string and handle NaN/nan values
+        cell = str(cell).strip()
+        if cell.lower() == "nan" or cell == "":
             cell = ""
-
-        if cell.find(notes) == -1:
+        
+        # Use pipe delimiter to separate individual notes
+        notes_list = [n.strip() for n in cell.split("|") if n.strip()]
+        
+        if notes not in notes_list:
             return False
-            # {
-            #   "success": False,
-            #  "message": f"'{notes}' was not found in activity {activity} notes",
-            # "activity_id": activity,
-            # "notes": cell
-            # }
-        else:
-            cell = cell.replace(notes, "")
-            while "  " in cell:
-                cell = cell.replace("  ", " ")
-            df_activities.loc[activity, "extra_notes"] = cell
-            df_activities.to_csv("data/activities.csv", index=True)
-            return {
-                "success": True,
-                "message": f"'{notes}' removed from activity {activity} notes",
-                "activity_id": activity,
-                "notes": cell
-            }
+        
+        notes_list.remove(notes)
+        cell = "|".join(notes_list)
+        df_activities.loc[activity, "extra_notes"] = cell
+        df_activities.to_csv("data/activities.csv", index=True)
+        
+        return {
+            "success": True,
+            "message": f"'{notes}' removed from activity {activity} notes",
+            "activity_id": activity,
+            "notes": cell
+        }
 
     def load_camps_for_leader(self, file):
         df_camps = pd.read_csv(file)
@@ -646,5 +706,3 @@ class ScoutLeader(User):
         df_campers["full_name"] = df_campers["first_name"] + " " + df_campers["last_name"]
         df_filtered = df_campers[df_campers["camper_id"].isin(chosen_campers_str)]
         return df_filtered[["camper_id", "full_name"]]
-
-

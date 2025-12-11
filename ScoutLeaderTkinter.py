@@ -12,24 +12,24 @@ import pandas as pd
 
 
 
-def ScoutLeaderPage(leader_username):
+def ScoutLeaderPage(root,leader_username):
     """
     Core Setup (Root Window / Canvas Creation + Background Image on canvas)
     """
     # Root/Canvas Creation
-    root = tk.Tk()
-    root.geometry("1280x720")
-    root.resizable(False, False)
-    root.title(f"CampTrack / {leader_username} / Dashboard")
+    window = tk.Toplevel(root)
+    window.geometry("1280x720")
+    window.resizable(False, False)
+    window.title(f"CampTrack / {leader_username} / Dashboard")
 
-    canvas = tk.Canvas(root, width="1280", height="720", bg="white")
+    canvas = tk.Canvas(window, width="1280", height="720", bg="white")
     canvas.pack(expand=True, fill="both")
 
     bg = tk.PhotoImage(file="Desert.png")
     canvas_bg = canvas.create_image(0, 0, image=bg, anchor="nw")
     canvas.tag_lower(canvas_bg)
 
-
+    window.bg = bg
 
 
     """
@@ -78,16 +78,18 @@ def ScoutLeaderPage(leader_username):
 
         else:
 
-            canvas.itemconfig(welcome, text = "")
+            canvas.itemconfig(welcome, text="")
             canvas.after(300, show_widgets)
 
     slide_in()
 
     # Creating memory for Map and Notification Board slide-down widgets
     map_board = tk.PhotoImage(file="map_board.png")
+    window.map_board = map_board
     canvas_map_board = canvas.create_image(960, -400, image=map_board)
 
     notif_msg_board = tk.PhotoImage(file="notif_msg_boards.png")
+    window.notif_msg_board = notif_msg_board
     canvas_map_notif_msg_board = canvas.create_image(320, -400, image=notif_msg_board)
 
     # Slide-down function for Map and Notification Board widgets
@@ -126,6 +128,8 @@ def ScoutLeaderPage(leader_username):
     photoimageplanned_highlighted = tk.PhotoImage(file="Highlighted-amber.png")
 
     tent_icons = {}
+
+    location_label = None
 
     location_coords = {
         "Sonelgaz Aokas": (310, 40),
@@ -227,21 +231,31 @@ def ScoutLeaderPage(leader_username):
     """Within a specific location (eg: "Timimoun") return the list of camps there 
     (leader-specific from camp_dict and unassigned camps)."""
     def camps_for_location(location):
-        # Remember camp_dict is global and contains the selected leader's camps
-        camps = [camp for camp in camp_dict.values() if camp.location == location]
+        camps = []
+        leader_username = selected_leader.username.strip().lower()
 
         try:
             with open(CAMPS_FILE, newline="", encoding="utf-8") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
+                    loc_value = str(row.get("location", "") or "").strip()
+                    if loc_value != location:
+                        continue
+
                     leader_value_raw = row.get("scout_leader", "")
                     leader_value = str(leader_value_raw or "").strip()
-                    if leader_value.lower() != "unassigned":
-                        continue  # already assigned to a leader (therefore not unassigned)
-                    if row.get("location") != location:
-                        continue # different location to requested
-                    if row.get("name") in camp_dict:
-                        continue # already in leader's camps
+                    leader_lower = leader_value.lower()
+
+                    include_row = False
+                    display_leader = leader_value
+
+                    if leader_lower in ("", "na", "unassigned"):
+                        include_row = True
+                        display_leader = "unassigned"
+                    elif leader_lower == leader_username:
+                        include_row = True
+                    else:
+                        continue
 
                     try:
                         start_dt = datetime.datetime.strptime(row["start_date"], "%d/%m/%Y")
@@ -251,13 +265,13 @@ def ScoutLeaderPage(leader_username):
 
                     camp_obj = SimpleNamespace(
                         name=row["name"],
-                        location=row["location"],
+                        location=loc_value,
                         type=row.get("type", ""),
                         start_date=start_dt,
                         end_date=end_dt,
                         food_supply_per_day=int(row.get("food_supply_per_day", 0) or 0),
                         food_demand_per_day=int(row.get("food_demand_per_day", 0) or 0),
-                        scout_leader=leader_value,
+                        scout_leader=display_leader,
                         pay=float(row.get("pay", 0) or 0),
                     )
                     camps.append(camp_obj)
@@ -265,7 +279,6 @@ def ScoutLeaderPage(leader_username):
             messagebox.showerror("Missing data", f"Could not find {CAMPS_FILE}.")
 
         return camps
-
 
     """Time status of a camp: planned, ongoing, completed."""
     def get_camp_status(camp, now=None):
@@ -323,10 +336,20 @@ def ScoutLeaderPage(leader_username):
             if messagebox.askyesno(f"{tent_icons.get(item)}",
                                    f"{tent_icons.get(item)} located at ({event.x}, {event.y}). Go to location?"):
                 global current_location
+                nonlocal location_label
                 current_location = tent_icons.get(item)  # maybe don't use get, just use tent_icons[item]
-                loc_title = tk.Label(canvas, text=f"{current_location}", font=("Comic Sans MS", 30), fg="white",
-                                     bg="#1095d6")
-                loc_title.place(x=640, y=20, anchor="n")
+
+                if location_label is not None:
+                    location_label.destroy()
+
+                location_label = tk.Label(
+                    canvas,
+                    text=f"{current_location}",
+                    font=("Comic Sans MS", 30),
+                    fg="white",
+                    bg="#1095d6"
+                )
+                location_label.place(x=640, y=20, anchor="n")
                 show_camps_treeview()
                 show_create_camp_window()
 
@@ -397,8 +420,56 @@ def ScoutLeaderPage(leader_username):
                             )
                         else:
                             messagebox.showinfo("Camp assigned", result.get("message", "You now supervise this camp."))
-                        refresh_leader_camps()
-                        show_camps_treeview()
+                            
+                            # Ask for food requirement per camper
+                            food_requirement_window = tk.Toplevel()
+                            food_requirement_window.title("Set Food Requirement")
+                            food_requirement_window.geometry("400x200")
+                            food_requirement_window.configure(bg="lightblue")
+                            
+                            tk.Label(food_requirement_window, text=f"Food requirement per camper per day for {camp_name}:",
+                                    bg="lightblue", font=("Comic Sans MS", 12), fg="black").pack(pady=10)
+                            
+                            food_entry = tk.Entry(food_requirement_window, font=("Comic Sans MS", 12), width=20)
+                            food_entry.pack(pady=10)
+                            food_entry.focus()
+                            
+                            def set_food_requirement():
+                                try:
+                                    food_req = float(food_entry.get())
+                                    if food_req < 0:
+                                        messagebox.showerror("Invalid input", "Food requirement must be non-negative")
+                                        return
+                                    elif food_req >= 5:
+                                        messagebox.showerror("Invalid input", "Too much food: Food requirement must be less than 5")
+                                        return
+                                    elif type(food_req) != int:
+                                        messagebox.showerror("Invalid input",
+                                                             "Food requirement must be a whole number")
+                                        return
+
+                                    
+                                    food_result = selected_leader.set_food_requirement_per_camper(camp_name, food_req)
+                                    if food_result.get("success"):
+                                        messagebox.showinfo("Success", 
+                                            f"Food requirement set!\n"
+                                            f"Per camper: {food_req}\n"
+                                            f"Total campers: {food_result.get('total_campers')}\n"
+                                            f"Daily demand: {food_result.get('food_demand')}")
+                                        food_requirement_window.destroy()
+                                    else:
+                                        messagebox.showerror("Error", "Failed to set food requirement")
+                                except ValueError:
+                                    messagebox.showerror("Invalid input", "Please enter a valid number")
+                            
+                            confirm_btn = tk.Button(food_requirement_window, text="Set Requirement",
+                                                   command=set_food_requirement,
+                                                   bg="white", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                                   activebackground="darkgreen")
+                            confirm_btn.pack(pady=10)
+                            
+                            refresh_leader_camps()
+                            show_camps_treeview()
                     else:
                         messagebox.showerror("Unable to assign", result.get("message", "Assignment failed."))
                 return
@@ -610,10 +681,18 @@ def ScoutLeaderPage(leader_username):
                         for camper_id in selected_ids:
                             result = selected_leader.assign_camper(camper_id, camp_obj.name)
                             if not result.get("success"):
-                                messagebox.showerror("Assignment failed", result.get("message", "Unknown error"))
+                                messagebox.showerror("Error", result.get("message", "Failed to assign camper"))
                                 return
 
-                        messagebox.showinfo("Success", f"Added {len(selected_ids)} camper(s) to {camp_obj.name}")
+                        # Recalculate food demand after adding campers
+                        food_result = selected_leader.recalculate_food_demand(camp_obj.name)
+                        if food_result.get("success"):
+                            messagebox.showinfo("Success", 
+                                f"Added {len(selected_ids)} camper(s) to {camp_obj.name}\n"
+                                f"Food demand updated: {food_result.get('food_demand')} units")
+                        else:
+                            messagebox.showinfo("Success", f"Added {len(selected_ids)} camper(s) to {camp_obj.name}")
+                        
                         add_window.destroy()
                     except Exception as e:
                         messagebox.showerror("Error", f"Failed to add campers: {str(e)}")
@@ -736,10 +815,18 @@ def ScoutLeaderPage(leader_username):
                         for camper_id in selected_ids:
                             result = selected_leader.remove_camper(camper_id)
                             if not result.get("success"):
-                                messagebox.showerror("Removal failed", result.get("message", "Unknown error"))
+                                messagebox.showerror("Error", result.get("message", "Failed to remove camper"))
                                 return
 
-                        messagebox.showinfo("Success", f"Removed {len(selected_ids)} camper(s) from {camp_obj.name}")
+                        # Recalculate food demand after removing campers
+                        food_result = selected_leader.recalculate_food_demand(camp_obj.name)
+                        if food_result.get("success"):
+                            messagebox.showinfo("Success", 
+                                f"Removed {len(selected_ids)} camper(s) from {camp_obj.name}\n"
+                                f"Food demand updated: {food_result.get('food_demand')} units")
+                        else:
+                            messagebox.showinfo("Success", f"Removed {len(selected_ids)} camper(s) from {camp_obj.name}")
+                        
                         remove_window.destroy()
                     except Exception as e:
                         messagebox.showerror("Error", f"Failed to remove campers: {str(e)}")
@@ -941,7 +1028,7 @@ def ScoutLeaderPage(leader_username):
 
                     # Title
                     title_label = tk.Label(remove_act_window, text=f"Remove Campers from {activity_name}",
-                                          bg="dodgerblue", fg="white", font=("Comic Sans MS", 14, "bold"))
+                                          bg="dodgerblue", fg="black", font=("Comic Sans MS", 14, "bold"))
                     title_label.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
 
                     selected_campers = {}
@@ -1061,13 +1148,13 @@ def ScoutLeaderPage(leader_username):
 
                 add_act_btn = tk.Button(button_frame, text="Add Campers", command=open_add_activity_window,
                                        bg="green", fg="black", font=("Comic Sans MS", 12, "bold"),
-                                       activebackground="darkgreen", activeforeground="white",
+                                       activebackground="darkgreen", activeforeground="black",
                                        relief="raised", bd=2)
                 add_act_btn.grid(row=0, column=0, padx=5, pady=5, sticky="ew", ipady=5)
 
                 remove_act_btn = tk.Button(button_frame, text="Remove Campers", command=open_remove_activity_window,
                                           bg="red", fg="black", font=("Comic Sans MS", 12, "bold"),
-                                          activebackground="darkred", activeforeground="white",
+                                          activebackground="darkred", activeforeground="black",
                                           relief="raised", bd=2)
                 remove_act_btn.grid(row=0, column=1, padx=5, pady=5, sticky="ew", ipady=5)
 
@@ -1080,124 +1167,204 @@ def ScoutLeaderPage(leader_username):
 
                 extra_notes_window.grid_columnconfigure(0, weight=1)
                 extra_notes_window.grid_columnconfigure(1, weight=1)
+                extra_notes_window.grid_rowconfigure(1, weight=1)
 
                 extra_notes_window_title = tk.Label(extra_notes_window, text=f"Extra notes for {activity_name}",
                                                     bg="dodgerblue", font=("Comic Sans MS", 22))
                 extra_notes_window_title.grid(row=0, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 5))
 
-                df = leaders[leader_username].get_notes_for_activity(camp_obj.name)
+                # Get activity_id from activity_name and camp_name
+                df_activities = pd.read_csv("data/activities.csv")
+                activity_row = df_activities[(df_activities["camp_name"] == camp_obj.name) & 
+                                            (df_activities["activity_name"] == activity_name)]
+                
+                if activity_row.empty:
+                    error_label = tk.Label(extra_notes_window, text="Activity not found", bg="white", fg="black")
+                    error_label.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+                    return
+                
+                activity_id = int(activity_row.iloc[0]["activity_id"])
+                notes_str = activity_row.iloc[0]["extra_notes"]
+                
+                # Parse notes using pipe delimiter
+                if pd.isna(notes_str) or str(notes_str).strip() == "" or str(notes_str).strip().lower() == "nan":
+                    notes_list = []
+                else:
+                    notes_list = [n.strip() for n in str(notes_str).split("|") if n.strip()]
 
-                # Filter only by activity_name
-                df_activity = df[df["activity_name"] == activity_name]
+                # Display notes in a scrollable frame
+                notes_frame = tk.Frame(extra_notes_window, bg="white", relief="sunken", bd=1)
+                notes_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+                extra_notes_window.grid_rowconfigure(1, weight=1)
 
-                if not df_activity.empty:
-                    notes = df_activity.iloc[0]["extra_notes"]
-                    if pd.isna(notes) or notes == "":
-                        notes = "No notes found for this activity"
+                if not notes_list:
+                    no_notes_label = tk.Label(notes_frame, text="No notes yet", bg="white", fg="black", 
+                                             font=("Comic Sans MS", 12))
+                    no_notes_label.pack(pady=20)
+                else:
+                    # Scrollbar and listbox for notes
+                    scrollbar = ttk.Scrollbar(notes_frame)
+                    scrollbar.pack(side="right", fill="y")
 
-                notes_label = tk.Label(
-                    extra_notes_window,
-                    text=notes,
-                    bg="white",
-                    fg="black",
-                    font=("Comic Sans MS", 16),
-                    wraplength=350,
-                    justify="left"
-                )
-                notes_label.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+                    notes_listbox = tk.Listbox(notes_frame, font=("Comic Sans MS", 11), 
+                                              yscrollcommand=scrollbar.set, bg="white", fg="black",
+                                              relief="flat", bd=0, activestyle="none", height=10)
+                    scrollbar.config(command=notes_listbox.yview)
+                    
+                    for i, note in enumerate(notes_list):
+                        notes_listbox.insert(i, f"• {note}")
+                    
+                    notes_listbox.pack(fill="both", expand=True)
 
                 def add_extra_notes():
                     add_extra_notes_window = tk.Toplevel()
                     add_extra_notes_window.title(f"Add Extra notes for {activity_name}")
-                    add_extra_notes_window.geometry("300x100")
+                    add_extra_notes_window.geometry("400x200")
                     add_extra_notes_window.configure(bg="lightblue")
 
                     add_extra_notes_window.grid_columnconfigure(0, weight=1)
+                    add_extra_notes_window.grid_rowconfigure(1, weight=1)
 
-                    add_notes_label = tk.Label(add_extra_notes_window, text="Enter text", bg="dodgerblue",
-                                               font=("Comic Sans MS", 18))
+                    add_notes_label = tk.Label(add_extra_notes_window, text="Enter new note:", bg="dodgerblue",
+                                               font=("Comic Sans MS", 14, "bold"), fg="white")
                     add_notes_label.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
 
-                    extra_notes_window.configure(bg="lightblue")
-                    add_notes_entry = tk.Entry(add_extra_notes_window, width=30, font=("Arial", 14))
-                    add_notes_entry.grid(row=1, column=0, sticky="ew", padx=10, pady=(5, 10))
-
-                    def get_activity_id(camp_name, activity_name):
-                        df = pd.read_csv("data/activities.csv")
-                        filtered = df[(df["camp_name"] == camp_name) & (df["activity_name"] == activity_name)]
-
-                        if filtered.empty:
-                            raise ValueError(f"No activity found for camp '{camp_name}' with name '{activity_name}'")
-
-                        activity_id = filtered.iloc[0]["activity_id"]
-                        return int(activity_id)
+                    add_notes_entry = tk.Text(add_extra_notes_window, width=40, height=4, font=("Arial", 11), wrap="word")
+                    add_notes_entry.grid(row=1, column=0, sticky="nsew", padx=10, pady=(5, 10))
 
                     def save_notes(event=None):
-                        new_notes = add_notes_entry.get()
-                        if new_notes.strip() == "":
+                        new_notes = add_notes_entry.get("1.0", "end-1c").strip()
+                        if not new_notes:
+                            messagebox.showwarning("Empty Note", "Please enter some text before saving.")
                             return
-                        activity_id = get_activity_id(camp_obj.name, activity_name)
-                        leaders[leader_username].add_activity_outcomes(activity_id, new_notes)
-                        add_extra_notes_window.destroy()
-                        extra_notes_window.destroy()
-                        open_extra_notes_window(activity_name)
+                        try:
+                            leaders[leader_username].add_activity_outcomes(activity_id, new_notes)
+                            messagebox.showinfo("Success", "Note added successfully!")
+                            add_extra_notes_window.destroy()
+                            extra_notes_window.destroy()
+                            open_extra_notes_window(activity_name)
+                        except Exception as e:
+                            messagebox.showerror("Error", f"Failed to add note: {str(e)}")
 
-                    add_notes_entry.bind("<Return>", save_notes)
-
-                    activity_id = get_activity_id(camp_obj.name, activity_name)
-                    leaders[leader_username].add_activity_outcomes(activity_id, add_notes_entry.get())
+                    confirm_button = tk.Button(add_extra_notes_window, text="Add Note", command=save_notes, 
+                                               bg="white", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                               padx=15, pady=8)
+                    confirm_button.grid(row=2, column=0, sticky="ew", padx=10, pady=(5, 10))
 
                 def remove_extra_notes():
                     remove_extra_notes_window = tk.Toplevel()
                     remove_extra_notes_window.title(f"Remove Extra notes for {activity_name}")
-                    remove_extra_notes_window.geometry("300x100")
+                    remove_extra_notes_window.geometry("400x400")
                     remove_extra_notes_window.configure(bg="lightblue")
 
                     remove_extra_notes_window.grid_columnconfigure(0, weight=1)
+                    remove_extra_notes_window.grid_rowconfigure(2, weight=1)
 
-                    remove_notes_label = tk.Label(remove_extra_notes_window, text="Enter text", bg="dodgerblue",
-                                                  font=("Comic Sans MS", 18))
+                    remove_notes_label = tk.Label(remove_extra_notes_window, text="Select notes to remove:",
+                                                  bg="white", font=("Comic Sans MS", 14, "bold"), fg="black")
                     remove_notes_label.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
 
-                    extra_notes_window.configure(bg="lightblue")
-                    remove_notes_entry = tk.Entry(remove_extra_notes_window, width=30, font=("Arial", 14))
-                    remove_notes_entry.grid(row=1, column=0, sticky="ew", padx=10, pady=(5, 10))
+                    if not notes_list:
+                        no_notes_label = tk.Label(remove_extra_notes_window, text="No notes to remove",
+                                                 bg="white", fg="black", font=("Comic Sans MS", 12))
+                        no_notes_label.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+                    else:
+                        # Checkbox-style selection like add/remove campers
+                        tree_frame = tk.Frame(remove_extra_notes_window, bg="white")
+                        tree_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
 
-                    def get_activity_id(camp_name, activity_name):
-                        df = pd.read_csv("data/activities.csv")
-                        filtered = df[(df["camp_name"] == camp_name) & (df["activity_name"] == activity_name)]
+                        scrollbar = ttk.Scrollbar(tree_frame)
+                        scrollbar.pack(side="right", fill="y")
 
-                        if filtered.empty:
-                            raise ValueError(f"No activity found for camp '{camp_name}' with name '{activity_name}'")
+                        notes_tree = ttk.Treeview(tree_frame, columns=("Note",), show="tree", 
+                                                 yscrollcommand=scrollbar.set, height=10)
+                        scrollbar.config(command=notes_tree.yview)
 
-                        activity_id = filtered.iloc[0]["activity_id"]
-                        return int(activity_id)
+                        notes_tree.heading("#0", text="✓")
+                        notes_tree.heading("Note", text="Note Content")
+                        notes_tree.column("#0", width=30)
+                        notes_tree.column("Note", width=350)
 
-                    def save_notes(event=None):
-                        new_notes = remove_notes_entry.get()
-                        if new_notes.strip() == "":
-                            return
-                        activity_id = get_activity_id(camp_obj.name, activity_name)
-                        success = leaders[leader_username].remove_activity_outcomes(activity_id, new_notes)
-                        if not success:
-                            messagebox.showerror(
-                                title="Error Removing Note",
-                                message=f"'{new_notes}' was not found in activity notes."
-                            )
-                            return
+                        # Dictionary to track checkbox states
+                        selected_notes = {}
+                        
+                        # Insert notes as rows
+                        for i, note in enumerate(notes_list):
+                            note_id = str(i)
+                            selected_notes[note_id] = False
+                            notes_tree.insert("", "end", note_id, text="☐", values=(note,))
 
-                        remove_extra_notes_window.destroy()
-                        extra_notes_window.destroy()
-                        open_extra_notes_window(activity_name)
+                        # Click to toggle checkbox
+                        def on_tree_click(event):
+                            item = notes_tree.identify_row(event.y)
+                            if not item:
+                                return
+                            col = notes_tree.identify_column(event.x)
+                            if col == "#0":
+                                current_state = selected_notes[item]
+                                selected_notes[item] = not current_state
+                                new_text = "☑" if not current_state else "☐"
+                                notes_tree.item(item, text=new_text)
 
-                    remove_notes_entry.bind("<Return>", save_notes)
+                        notes_tree.bind("<Button-1>", on_tree_click)
+                        notes_tree.pack(fill="both", expand=True)
 
-                add_notes_button = tk.Button(extra_notes_window, text="Add Notes", command=add_extra_notes, bg="white",
-                                             font=("Comic Sans MS", 18), )
+                        # Button frame
+                        button_frame = tk.Frame(remove_extra_notes_window, bg="lightblue")
+                        button_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
+                        button_frame.grid_columnconfigure(0, weight=1)
+                        button_frame.grid_columnconfigure(1, weight=1)
+
+                        def select_all():
+                            for note_id in selected_notes:
+                                selected_notes[note_id] = True
+                            for item in notes_tree.get_children():
+                                notes_tree.item(item, text="☑")
+
+                        def deselect_all():
+                            for note_id in selected_notes:
+                                selected_notes[note_id] = False
+                            for item in notes_tree.get_children():
+                                notes_tree.item(item, text="☐")
+
+                        ttk.Button(button_frame, text="Select All", command=select_all).grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+                        ttk.Button(button_frame, text="Deselect All", command=deselect_all).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+                        def confirm_remove():
+                            selected_indices = [int(note_id) for note_id, selected in selected_notes.items() if selected]
+                            if not selected_indices:
+                                messagebox.showwarning("No selection", "Please select at least one note to remove.")
+                                return
+
+                            try:
+                                for idx in sorted(selected_indices, reverse=True):
+                                    note_to_remove = notes_list[idx]
+                                    result = leaders[leader_username].remove_activity_outcomes(activity_id, note_to_remove)
+                                    if not result:
+                                        messagebox.showerror("Error", f"Failed to remove note: {note_to_remove}")
+                                        return
+
+                                messagebox.showinfo("Success", f"Removed {len(selected_indices)} note(s) successfully!")
+                                remove_extra_notes_window.destroy()
+                                extra_notes_window.destroy()
+                                open_extra_notes_window(activity_name)
+                            except Exception as e:
+                                messagebox.showerror("Error", f"Failed to remove notes: {str(e)}")
+
+                        confirm_btn = tk.Button(button_frame, text="Remove Selected Notes", command=confirm_remove,
+                                               bg="white", fg="black", font=("Comic Sans MS", 12, "bold"),
+                                               activebackground="darkred", activeforeground="white",
+                                               relief="raised", bd=2, padx=10, pady=8)
+                        confirm_btn.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=10, ipady=5)
+
+                add_notes_button = tk.Button(extra_notes_window, text="Add Notes", command=add_extra_notes, 
+                                             bg="white", fg="black", font=("Comic Sans MS", 14, "bold"),
+                                             padx=15, pady=8)
                 add_notes_button.grid(row=2, column=0, sticky="ew", padx=10, pady=(5, 10))
 
                 remove_notes_button = tk.Button(extra_notes_window, text="Remove Notes", command=remove_extra_notes,
-                                                bg="white", font=("Comic Sans MS", 18), )
+                                                bg="white", fg="black", font=("Comic Sans MS", 14, "bold"),
+                                                padx=15, pady=8)
                 remove_notes_button.grid(row=2, column=1, sticky="ew", padx=10, pady=(5, 10))
 
             activity_label = tk.Label(makecampframe, text="Activities", bg="dodgerblue", font=("Comic Sans MS", 18))
@@ -1298,22 +1465,16 @@ def ScoutLeaderPage(leader_username):
         MESSAGE FRAME: Placing a frame on the Message Board, then placing the messaging app inside the frame
         """
         global msgsubframe
-        msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white") # dimensions for messaging widget
+        msgsubframe = tk.Frame(canvas, width=500, height=300, bg="white")
         global msg_window
         msg_window = canvas.create_window(320,525, window = msgsubframe)
-        # Instantiate the MessagingApp from Msg_service (same call as in admin_GUI.py)
-        # Import locally to avoid top-level import issues — same pattern as AdminPage.
         try:
-            from Msg_service import MessagingApp
-            print("msgsubframe:", msgsubframe, "type:", type(msgsubframe))
-            print("msg_window:", msg_window, "type:", type(msg_window))
-            MessagingApp(msgsubframe)
+            from msg_system import MessagingApp
+            MessagingApp(msgsubframe, leader_username)
         except Exception as e:
-            # If MessagingApp import/initialisation fails we show a placeholder and print the error
-            tk.Label(msgsubframe, text="Messaging unavailable", font=("Comic Sans MS", 14)).pack(padx=10, pady=10)
+            error_label = tk.Label(msgsubframe, text="Messaging unavailable", font=("Comic Sans MS", 14), bg="white")
+            error_label.grid(row=0, column=0, padx=10, pady=10)
             print("Failed to load MessagingApp:", e)
-        # --- End messaging widget ---
-
 
         """
         BACK TO MAP FRAME: Placing a frame on the Message Board, then placing 2 button widgets 
@@ -1334,6 +1495,7 @@ def ScoutLeaderPage(leader_username):
             except Exception:
                 print("Error raising map or message window to top layer")
             # Geometry realignment of widgets
+            location_label.destroy()
             root.update_idletasks()
 
         """Button Frame/window + Button Creation"""
@@ -1347,33 +1509,54 @@ def ScoutLeaderPage(leader_username):
         style = ttk.Style()
         style.configure("Board.TButton", font=("Comic Sans MS", 16, "bold"), padding=(20, 20))
         # Button for going back to dashboard
-        ttk.Button(ntfsubframe, text="Back to Dashboard",
-               style="Board.TButton",
-               command=show_main_dashboard).grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+        back_btn = tk.Button(ntfsubframe, text="Back to Dashboard",
+                        command=show_main_dashboard,
+                        bg="#FFFFFF", fg="black",
+                        font=("Comic Sans MS", 14, "bold"),
+                        activebackground="#FFFFFF", activeforeground="black",
+                        relief="raised", bd=3,
+                        padx=15, pady=15,
+                        cursor="hand2")
+        back_btn.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+    
+    # Add hover effects for back button
+        def on_enter_back(event):
+            back_btn.config(bg="#1B5E20", relief="sunken", bd=4)
+    
+        def on_leave_back(event):
+            back_btn.config(bg="#2E7D32", relief="raised", bd=3)
+    
+        back_btn.bind("<Enter>", on_enter_back)
+        back_btn.bind("<Leave>", on_leave_back)
 
         """statistics window function"""
         def open_statistics_window():
             stats_window = tk.Toplevel()
             stats_window.title(f"Statistics - {selected_leader.username}")
-            stats_window.geometry("600x700")
-            stats_window.configure(bg="lightblue")
+            stats_window.geometry("450x600")
+            stats_window.configure(bg="white")
 
             stats_window.grid_columnconfigure(0, weight=1)
             stats_window.grid_rowconfigure(1, weight=1)
 
-            stats_title = tk.Label(stats_window, text=f"Statistics for {selected_leader.username}",
-                                  bg="dodgerblue", font=("Comic Sans MS", 18), fg="white")
-            stats_title.grid(row=0, column=0, sticky='ew', padx=10, pady=(10, 5))
+            # Header with title and username
+            header_frame = tk.Frame(stats_window, bg="#1095d6", height=60)
+            header_frame.grid(row=0, column=0, sticky="ew")
+            header_frame.pack_propagate(False)
+            
+            tk.Label(header_frame, text=f"📊 Statistics - {selected_leader.username}",
+                    bg="#1095d6", font=("Comic Sans MS", 18, "bold"), fg="black").pack(anchor="w", padx=20, pady=10)
 
             """Get statistics"""
             stats_data = selected_leader.get_leader_statistics()
 
             if not stats_data.get("success"):
                 no_stats_label = tk.Label(stats_window, text="No camps assigned yet",
-                                         bg="white", fg="black", font=("Comic Sans MS", 14))
-                no_stats_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+                                        bg="white", fg="black", font=("Comic Sans MS", 14))
+                no_stats_label.grid(row=1, column=0, sticky="nsew", padx=10, pady=50)
                 return
 
+            # Canvas and scrollbar setup
             canvas_frame = tk.Canvas(stats_window, bg="white", highlightthickness=0)
             scrollbar = ttk.Scrollbar(stats_window, orient="vertical", command=canvas_frame.yview)
             scrollable_frame = tk.Frame(canvas_frame, bg="white")
@@ -1386,62 +1569,111 @@ def ScoutLeaderPage(leader_username):
             canvas_frame.create_window((0, 0), window=scrollable_frame, anchor="nw")
             canvas_frame.configure(yscrollcommand=scrollbar.set)
 
-            canvas_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
-            scrollbar.grid(row=1, column=1, sticky="ns")
+            canvas_frame.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
+            scrollbar.grid(row=1, column=1, sticky="ns", padx=0, pady=0)
             stats_window.grid_rowconfigure(1, weight=1)
 
-            # Overall stats
+            # Overall stats - compact card style
             overall = stats_data.get("overall", {})
-            overall_frame = tk.LabelFrame(scrollable_frame, text="Overall Statistics",
-                                         bg="dodgerblue", fg="white", font=("Comic Sans MS", 12, "bold"))
-            overall_frame.pack(fill="x", padx=5, pady=5)
+            overall_frame = tk.Frame(scrollable_frame, bg="#E8F4F8", relief="flat", bd=0)
+            overall_frame.pack(fill="x", padx=10, pady=(15, 10), ipady=10)
 
-            overall_info = [
-                f"Total Camps: {overall.get('total_camps', 0)}",
-                f"Total Campers: {overall.get('total_campers', 0)}",
-                f"Total Activities: {overall.get('total_activities', 0)}",
-                f"Activity Utilisation: {overall.get('activity_utilisation_rate', 0)}%",
-                f"Total Pay: ${overall.get('total_pay', 0)}",
-                f"Food Supply: {overall.get('total_food_supply', 0)} | Demand: {overall.get('total_food_demand', 0)} | Surplus: {overall.get('food_surplus', 0)}"
+            title_label = tk.Label(overall_frame, text="📈 Overall Statistics",
+                                bg="#E8F4F8", font=("Comic Sans MS", 14, "bold"), fg="black")
+            title_label.pack(anchor="w", padx=10, pady=(5, 10))
+
+            # Create a grid for overall stats (2 columns)
+            stats_grid = tk.Frame(overall_frame, bg="#E8F4F8")
+            stats_grid.pack(fill="x", padx=10, pady=5)
+
+            overall_items = [
+                (f"🏕️  Total Camps", str(overall.get('total_camps', 0))),
+                (f"👥 Total Campers", str(overall.get('total_campers', 0))),
+                (f"🎯 Total Activities", str(overall.get('total_activities', 0))),
+                (f"📊 Activity Usage", f"{overall.get('activity_utilisation_rate', 0)}%"),
+                (f"💰 Total Pay", f"${overall.get('total_pay', 0)}"),
+                (f"🥘 Food Surplus", f"{overall.get('food_surplus', 0)} units"),
             ]
 
-            for info in overall_info:
-                tk.Label(overall_frame, text=info, bg="dodgerblue", fg="white",
-                        font=("Comic Sans MS", 10)).pack(anchor="w", padx=10, pady=2)
+            for idx, (label, value) in enumerate(overall_items):
+                row = idx // 2
+                col = idx % 2
+                
+                stat_box = tk.Frame(stats_grid, bg="white", relief="raised", bd=1)
+                stat_box.grid(row=row, column=col, padx=5, pady=5, sticky="ew", ipady=8)
+                stats_grid.grid_columnconfigure(col, weight=1)
+                
+                tk.Label(stat_box, text=label, bg="white", font=("Comic Sans MS", 10, "bold"), fg="black").pack(anchor="w", padx=10, pady=(5, 2))
+                tk.Label(stat_box, text=value, bg="white", font=("Comic Sans MS", 12, "bold"), fg="black").pack(anchor="w", padx=10, pady=(0, 5))
 
             # Per-camp stats
             camps = stats_data.get("camps", [])
+            
+            if camps:
+                camps_title = tk.Label(scrollable_frame, text="📍 Camp Details",
+                                    bg="white", font=("Comic Sans MS", 14, "bold"), fg="black")
+                camps_title.pack(anchor="w", padx=15, pady=(20, 10))
+
             for camp in camps:
-                camp_frame = tk.LabelFrame(scrollable_frame, text=f"{camp['camp_name']} - {camp['location']}",
-                                          bg="lightblue", font=("Comic Sans MS", 11, "bold"))
-                camp_frame.pack(fill="x", padx=5, pady=5)
+                camp_frame = tk.Frame(scrollable_frame, bg="#F5F5F5", relief="raised", bd=1)
+                camp_frame.pack(fill="x", padx=10, pady=8, ipady=10)
+
+                # Camp name header
+                camp_header = tk.Frame(camp_frame, bg="#0D7FA8")
+                camp_header.pack(fill="x", padx=0, pady=0)
+                
+                tk.Label(camp_header, text=f"  {camp['camp_name']} • {camp['location']}",
+                        bg="#0D7FA8", font=("Comic Sans MS", 12, "bold"), fg="black").pack(anchor="w", pady=8)
+
+                # Camp info in grid (2 columns)
+                info_frame = tk.Frame(camp_frame, bg="#F5F5F5")
+                info_frame.pack(fill="x", padx=15, pady=10)
 
                 camp_info = [
-                    f"Duration: {camp['duration']}",
-                    f"Campers at Camp: {camp['campers_at_camp']}",
-                    f"Activities: {camp['activities']['total_filled']}/{camp['activities']['total_capacity']} slots ({camp['activities']['utilisation_rate']}%)",
-                    f"Daily Food: Supply {camp['food']['daily_supply']} | Demand {camp['food']['daily_demand']} | Surplus {camp['food']['daily_surplus']:+d}",
-                    f"Pay: ${camp['pay']}"
+                    (f"📅 Duration", camp['duration']),
+                    (f"👥 Campers", str(camp['campers_at_camp'])),
+                    (f"🎯 Activities", f"{camp['activities']['total_filled']}/{camp['activities']['total_capacity']} ({camp['activities']['utilisation_rate']}%)"),
+                    (f"🥘 Food", f"Supply: {camp['food']['daily_supply']} | Demand: {camp['food']['daily_demand']} | Surplus: {camp['food']['daily_surplus']:+d}"),
+                    (f"💰 Pay", f"${camp['pay']}"),
                 ]
 
-                for info in camp_info:
-                    tk.Label(camp_frame, text=info, bg="white", fg="black",
-                            font=("Comic Sans MS", 9)).pack(anchor="w", padx=10, pady=1)
+                for idx, (label, value) in enumerate(camp_info):
+                    info_box = tk.Frame(info_frame, bg="white", relief="flat", bd=0)
+                    info_box.pack(fill="x", pady=4, ipady=5)
+                    
+                    tk.Label(info_box, text=label, bg="white", font=("Comic Sans MS", 9, "bold"), fg="black", width=20, anchor="w").pack(side="left", padx=5)
+                    tk.Label(info_box, text=value, bg="white", font=("Comic Sans MS", 9), fg="black", anchor="w").pack(side="left", fill="x", expand=True, padx=5)
 
-                # Comments section
+                # Comments section (if exists)
                 if camp.get("additional_comments"):
-                    comments_label = tk.Label(camp_frame, text="Comments:", bg="white", fg="black",
-                                            font=("Comic Sans MS", 9, "bold"))
-                    comments_label.pack(anchor="w", padx=10, pady=(5, 2))
-
+                    comments_frame = tk.Frame(camp_frame, bg="#FFF9E6", relief="flat", bd=0)
+                    comments_frame.pack(fill="x", padx=15, pady=(10, 0), ipady=8)
+                    
+                    tk.Label(comments_frame, text="💬 Notes",
+                            bg="#FFF9E6", font=("Comic Sans MS", 9, "bold"), fg="black").pack(anchor="w", padx=5, pady=(3, 5))
+                    
                     for comment in camp["additional_comments"]:
-                        comment_text = f"• {comment['activity_name']}: {comment['comment']}"
-                        tk.Label(camp_frame, text=comment_text, bg="white", fg="black",
-                                font=("Comic Sans MS", 8), wraplength=300, justify="left").pack(anchor="w", padx=20, pady=1)
-
-        ttk.Button(ntfsubframe, text="View Statistics",
-               style="Board.TButton",
-               command=open_statistics_window).grid(row=0, column=1, sticky="nsew", padx=12, pady=12)
+                        tk.Label(comments_frame, text=f"• {comment}",
+                                bg="#FFF9E6", font=("Comic Sans MS", 8), fg="black", wraplength=500, justify="left").pack(anchor="w", padx=15, pady=2)
+        stats_btn = tk.Button(ntfsubframe, text="View Statistics",
+                         command=open_statistics_window,
+                         bg="#FFFFFF", fg="black",
+                         font=("Comic Sans MS", 14, "bold"),
+                         activebackground="#FFFFFF", activeforeground="black",
+                         relief="raised", bd=3,
+                         padx=15, pady=15,
+                         cursor="hand2")
+        stats_btn.grid(row=0, column=1, sticky="nsew", padx=12, pady=12)
+    
+    # Add hover effects for stats button
+        def on_enter_stats(event):
+            stats_btn.config(bg="#0D47A1", relief="sunken", bd=4)
+    
+        def on_leave_stats(event):
+            stats_btn.config(bg="#1565C0", relief="raised", bd=3)
+    
+        stats_btn.bind("<Enter>", on_enter_stats)
+        stats_btn.bind("<Leave>", on_leave_stats)
 
         global ntf_window
         ntf_window = canvas.create_window(320, 190, width=520, height=140, window = ntfsubframe)
@@ -1459,22 +1691,13 @@ def ScoutLeaderPage(leader_username):
         header.grid_columnconfigure(1, weight=0)
 
         # Header contents
-        tk.Label(header, text=leader_username, font=("Comic Sans MS", 18), background='#1095d6', fg="white").grid(row=0, column=0,
+        tk.Label(header, text=leader_username, font=("Comic Sans MS", 18), background='#1095d6', fg="black").grid(row=0, column=0,
                                                                                               sticky='w', padx=10,
                                                                                               pady=10)
-        ttk.Button(header, text="Logout",  command = lambda: root.destroy() if messagebox.askyesno("Logout","Are you sure you want to logout?") else None).grid(row=0, column=1, sticky='e', padx=10, pady=10)
+        def confirm_logout():
+            if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
+                window.destroy()
+                root.deiconify()
 
-
-
-
-
-
-
-
-
-    """
-    EXECUTE THE GUI!!!
-    """
-    root.mainloop()
-
-ScoutLeaderPage("leader2")
+        logout_btn = ttk.Button(header, text="Logout", command=confirm_logout)
+        logout_btn.grid(row=0, column=1, sticky='e', padx=10, pady=10)
